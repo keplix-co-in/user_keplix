@@ -19,19 +19,19 @@ import Footer from "../Footer/Footer";
 const CategoryToggle = ({ iconName, title, description, isExpanded, onPress }) => (
   <View style={styles.categorycontainer}>
     <View style={styles.leftSection}>
-      <Ionicons name={iconName} style={styles.iconStyle} size={30} color="white" />
+      <Ionicons name={iconName} style={styles.iconStyle} size={30} color="black" />
       <View style={styles.textContainer}>
         <Text style={styles.categoryTitle}>{title}</Text>
         <Text style={styles.categoryDescription}>{description}</Text>
       </View>
     </View>
     <TouchableOpacity onPress={onPress}>
-      <View style={styles.button}>
+      <View style={[styles.button , {borderColor : isExpanded ? "red" : "#666"}]}>
         <Ionicons
           name={isExpanded ? "chevron-up" : "chevron-down"}
           size={25}
           color="white"
-          style={styles.dropdownIcon}
+          style={[styles.dropdownIcon ]}
         />
       </View>
     </TouchableOpacity>
@@ -135,6 +135,7 @@ export default function ServicesCard({ navigation }) {
 
       <ScrollView>
         <CategoryToggle
+        style={styles.categorycontainer}
           iconName="brush"
           title="Cleaning"
           description="Interior & exterior cleaning services"
@@ -263,10 +264,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
-    backgroundColor: "black",
+    backgroundColor: "white",
     borderRadius: 20,
-    borderWidth: 3,
-    borderColor: "#ffffff40",
+    borderWidth: 2,
+    borderColor: "#c9b9b9ff",
     paddingVertical: 15,
     paddingHorizontal: 10,
   },
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     fontFamily: "DM",
-    color: "white",
+    color: "black",
   },
   categoryDescription: {
     fontSize: 14,
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
-    backgroundColor: "red",
+    backgroundColor: "white",
     marginRight: 10,
     marginLeft: 10,
     borderWidth: 2,
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   dropdownIcon: {
-    color: "white",
+    color: "black",
     marginRight: 10,
     marginLeft: 10,
   },
@@ -326,7 +327,9 @@ const styles = StyleSheet.create({
   gridItem: {
     flexDirection: "column",
     width: "30%",
-    backgroundColor: "#c8eaff",
+    // backgroundColor: "#c8eaff",
+    backgroundColor:"#e3eaeeff",
+    borderColor: "#666",
     padding: 15,
     borderRadius: 16,
     alignItems: "center",

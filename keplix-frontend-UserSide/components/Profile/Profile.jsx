@@ -63,7 +63,8 @@ export default function Profile({ navigation }) {
 
       {/* Settings Items */}
       <Text style={styles.sectionTitle}>Settings</Text>
-      <View style={styles.settingsList}>
+      <View style={styles.settingContainer}>
+        <View style={styles.settingsList}>
         <SettingsItem
           icon="card"
           title="Payment Methods"
@@ -101,7 +102,8 @@ export default function Profile({ navigation }) {
           targetScreen="Support"
         />
       </View>
-
+      </View>
+      
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         {/* <NavItem 
@@ -224,6 +226,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: "500",
     fontFamily: "DM",
+  },
+  settingContainer:{
+      // width: 361,
+      // height: 436.0001525878906,
+      // top: 282px,
+      // left: 16px,
+      // gap: 24px;
+      // angle: 0 deg,
+      // opacity: 1,
   },
   settingsList: {
     flex: 1,

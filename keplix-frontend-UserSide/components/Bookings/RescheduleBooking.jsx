@@ -335,11 +335,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   dateCell: {
+    marginLeft: 8,
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 2,
   },
   dateText: {
     fontSize: 16,
@@ -348,10 +348,12 @@ const styles = StyleSheet.create({
     fontFamily: 'DM',
   },
   availableDateText: {
-    color: '#40A69F',
+    color: 'black',
+    fontFamily: 'DM',
+    fontWeight: 'bold'
   },
   selectedDate: {
-    backgroundColor: '#4E46B4',
+    backgroundColor: 'red',
     borderRadius: 20,
   },
   selectedDateText: {
@@ -382,7 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   selectedTimeSlot: {
-    backgroundColor: '#4E46B4',
+    backgroundColor: 'red',
     borderColor: '#E2E2E2',
   },
   timeText: {
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookButtonActive: {
-    backgroundColor: '#4E46B4',
+    backgroundColor: 'red',
   },
   bookButtonText: {
     color: '#fff',
@@ -418,10 +420,10 @@ const styles = StyleSheet.create({
     height: 30,
     fontSize: 18,
     lineHeight:26,
-    color: "#4E46B4",
+    color: "red",
     justifyContent: "center",
     alignItems: "center",
-    borderColor: "#4E46B4",
+    borderColor: "red",
     borderWidth: 1.5,
     borderRadius: 4,
     backgroundColor: "#fff",
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DM',
   },
   confirmButton: {
-    backgroundColor: '#4E46B4',
+    backgroundColor: 'red',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 25,
