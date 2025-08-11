@@ -106,7 +106,7 @@ export default function SignUp({ navigation }) {
       <TouchableOpacity
         style={[
           styles.button,
-          isFormValid && { backgroundColor: 'red' },
+          { backgroundColor: isFormValid ? 'red' : '#888' },
         ]}
         onPress={handleVerify}
         activeOpacity={0.7}
@@ -116,7 +116,8 @@ export default function SignUp({ navigation }) {
 
       <TouchableOpacity onPress={() => navigation.navigate("SignUpPhone")}>
         <Text style={styles.createAccountText}>
-          or Sign up using Phone number
+          or Sign up using 
+          <Text style={{color: "red" , fontWeight: "15"}}>{" "}Phone number</Text>
         </Text>
       </TouchableOpacity>
 
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   backcontainer: {
     flexDirection: 'row',
@@ -143,14 +144,14 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 30,
     borderColor: '#E2E2E2',
-    color: 'white',
+    color: 'black',
     borderWidth: 2,
     borderRadius: 50,
   },
   text: {
     fontSize: 24,
     marginRight: 30,
-    color: "white",
+    color: "black",
     fontFamily: 'DM',
   },
   titleContainer: {
@@ -159,31 +160,32 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '500',
-    color: 'white',
+    color: 'black',
     fontSize: 32,
     marginBottom: 10,
     fontFamily: 'DM',
   },
   enter: {
     fontSize: 16,
-    color: 'white',
+    color: 'black',
     marginBottom: 10,
     fontFamily: 'DM',
   },
   input: {
     height: 50,
     borderColor: '#ddd',
+    // borderColor: 'black',
     borderWidth: 2,
     borderRadius: 70,
     marginBottom: 30,
     paddingHorizontal: 10,
     fontSize: 16,
     fontFamily: 'DM',
-    color: 'white',
+    color: 'black',
   },
   inputContainer: {
     flexDirection: 'row',
-    color: 'white',
+    color: 'black',
     alignItems: 'center',
     borderColor: '#ddd',
     borderWidth: 2,
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: 16,
-    color: 'white',
+    color: 'black',
     fontFamily: 'DM',
   },
   iconInsideInput: {

@@ -6,11 +6,11 @@ import Ionicons from "react-native-vector-icons/Ionicons"
 export default function ForgotPassword({navigation}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const isFormFilled = email.trim()!==''; 
+  // const isFormFilled = email.trim()!==''; 
+  const isFormFilled = /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim());
 
   return (
     <SafeAreaView style={styles.container}>
-
       <View style={styles.backcontainer}>
       <TouchableOpacity onPress={()=> navigation.goBack()}>
         <Ionicons name={"arrow-back-outline"} style={styles.icon} />
@@ -40,7 +40,10 @@ export default function ForgotPassword({navigation}) {
 
       <TouchableOpacity>
         <Text style={styles.createAccountText}>
-          or Reset the password via phone number
+          or Reset the password via 
+          <Text style={{color: 'red', fontWeight: 'bold'}}>
+            {" "}phone number
+          </Text>
         </Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -51,7 +54,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   backcontainer:{
     flexDirection: 'row', 
@@ -62,7 +65,7 @@ const styles = StyleSheet.create({
     fontSize: 30, 
     borderColor:'#E2E2E2',
     borderWidth:2,
-    color :"white",
+    color :"black",
     borderRadius:50,
   },
   text: {
@@ -77,19 +80,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight:500,
-    color: 'white',
+    color: 'black',
     fontSize: 32,
     marginBottom: 40,
     fontFamily:'DM',
   },
   enter:{
     fontSize: 16,
-    color: 'white',
+    color: 'black',
     marginBottom: 10,
     fontFamily:'DM',
   },
   input: {
-    color:'white',
+    color:'black',
     height: 50,
     borderColor: '#ddd',
     borderWidth: 2,
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
   createAccountText: {
     borderRadius:70,
     textAlign: 'center',
-    color: 'white',
+    color: '#666',
     fontSize: 14,
     borderColor:'#E2E2E2',
     borderWidth:2,

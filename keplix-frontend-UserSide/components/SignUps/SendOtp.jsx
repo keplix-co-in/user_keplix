@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     color:'black',
     flex: 1,
     padding: 20,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   backcontainer: {
     flexDirection: 'row',
@@ -111,14 +111,14 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   icon: {
-    color : 'white',
+    color : 'black',
     fontSize: 30,
     borderColor: '#E2E2E2',
     borderWidth: 2,
     borderRadius: 50,
   },
   text: {
-    color: 'white',
+    color: 'black',
     fontSize: 24,
     color: '#0000008F',
     marginRight: 30,
@@ -129,14 +129,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: 'white',
+    color: 'black',
     fontWeight: '500',
     fontSize: 32,
     marginBottom: 15,
     fontFamily: 'DM',
   },
   subtitle: {
-    color: 'white',
+    color: '#666',
     fontSize: 16,
     marginBottom: 20,
     fontFamily: 'DM',
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     textAlign: 'center',
     fontSize: 18,
-    color: 'white',
+    color: 'black',
     fontFamily: 'DM',
   },
   button: {

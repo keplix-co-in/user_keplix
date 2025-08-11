@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#4E46B4',
+    borderBottomColor: 'red',
   },
   tabText: {
     fontSize: 16,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     fontFamily: "DM",
   },
   activeTabText: {
-    color: '#4E46B4',
+    color: 'red',
     fontWeight: '500',
     fontFamily: "DM",
   },
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     borderBottomWidth:1
   },
   editButton: {
-    backgroundColor: '#4E46B4',
+    backgroundColor: 'red',
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,

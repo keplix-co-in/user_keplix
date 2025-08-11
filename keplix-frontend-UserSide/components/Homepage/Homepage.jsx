@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FlatList } from 'react-native';
+import { FlatList } from "react-native";
 import {
   View,
   Text,
@@ -17,20 +17,20 @@ import {
 import Footer from "../Footer/Footer";
 export default function Homepage({ navigation }) {
   const [activeDot, setActiveDot] = useState(0);
-const featuredServices = [
-  { icon: "car", label: "Detailing", route: "Detailing" },
-  { icon: "tools", label: "Repairs", route: "Repairs" },
-  { icon: "car-brake-alert", label: "Brakes", route: "Brakes" },
-  { icon: "seat", label: "Interior", route: "Interior" },
-  { icon: "tire", label: "Tyres", route: "Tyres" },
-  { icon: "fan", label: "AC Repair", route: "AC Repair" },
-  { icon: "alarm-light", label: "Emergency", route: "Emergency" },
-  { icon: "cassette", label: "Audio", route: "Audio" },
-  { icon: "car-wrench", label: "Suspension", route: "Suspension" },
-  { icon: "check-circle", label: "Inspection", route: "Inspection" },
-  { icon: "car-windshield", label: "Windshield", route: "Windshield" },
-  { icon: "steering", label: "Steering", route: "Steering" },
-];
+  const featuredServices = [
+    { icon: "car", label: "Detailing", route: "Detailing" },
+    { icon: "tools", label: "Repairs", route: "Repairs" },
+    { icon: "car-brake-alert", label: "Brakes", route: "Brakes" },
+    { icon: "seat", label: "Interior", route: "Interior" },
+    { icon: "tire", label: "Tyres", route: "Tyres" },
+    { icon: "fan", label: "AC Repair", route: "AC Repair" },
+    { icon: "alarm-light", label: "Emergency", route: "Emergency" },
+    { icon: "cassette", label: "Audio", route: "Audio" },
+    { icon: "car-wrench", label: "Suspension", route: "Suspension" },
+    { icon: "check-circle", label: "Inspection", route: "Inspection" },
+    { icon: "car-windshield", label: "Windshield", route: "Windshield" },
+    { icon: "steering", label: "Steering", route: "Steering" },
+  ];
 
   const banners = [
     {
@@ -193,7 +193,7 @@ const featuredServices = [
           </ScrollView>
         </View>
          */}
-         <FlatList
+        {/* <FlatList
   data={featuredServices}
   keyExtractor={(item, index) => index.toString()}
   numColumns={4}
@@ -206,11 +206,36 @@ const featuredServices = [
         navigation.navigate("ProviderList", { service: item.route })
       }
     >
-      <MaterialCommunityIcons name={item.icon} size={28} color="#D10000" />
+      <MaterialCommunityIcons name={item.icon} size={28} color="#f10a0aff" />
       <Text style={styles.gridItemText}>{item.label}</Text>
     </TouchableOpacity>
   )}
-/>
+/> */}
+
+        <FlatList
+          data={featuredServices}
+          keyExtractor={(item, index) => index.toString()}
+          numColumns={4}
+          scrollEnabled={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() =>
+                navigation.navigate("ProviderList", { service: item.route })
+              }
+            >
+              <View style={styles.iconBox}>
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={28}
+                  color="#D10000"
+                />
+              </View>
+              <Text style={styles.gridItemText}>{item.label}</Text>
+            </TouchableOpacity>
+          )}
+        />
 
         {/* Upcoming Services */}
         <View style={styles.upcomingSection}>
@@ -482,9 +507,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   gridItem: {
-  flex: 1,
+  flexBasis: '25%',   // 4 columns
   alignItems: "center",
-  marginVertical: 12,
+  justifyContent: "center",
+  paddingVertical: 10,
+},
+iconBox: {
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: "#E0E0E0",
+  borderRadius: 12,
+  width: 60,
+  height: 60,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 4,
+  elevation: 2,
 },
 gridItemText: {
   fontSize: 12,
@@ -492,6 +533,18 @@ gridItemText: {
   marginTop: 6,
   textAlign: "center",
 },
+
+  //   gridItem: {
+  //   flex: 1,
+  //   alignItems: "center",
+  //   marginVertical: 12,
+  // },
+  // gridItemText: {
+  //   fontSize: 12,
+  //   color: "#000",
+  //   marginTop: 6,
+  //   textAlign: "center",
+  // },
   serviceItem: {
     padding: 15,
     borderColor: "#E2E2E2",

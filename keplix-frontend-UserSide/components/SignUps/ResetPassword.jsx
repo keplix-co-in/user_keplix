@@ -14,8 +14,7 @@ export default function ResetPassword({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [secureEntryNew, setSecureEntryNew] = useState(true);
   const [secureEntryConfirm, setSecureEntryConfirm] = useState(true);
-  const isFormFilled =
-    newPassword.trim() !== "" && confirmPassword.trim() !== "";
+  const isFormFilled = newPassword.trim() !== "" && confirmPassword.trim() !== ""&& newPassword === confirmPassword;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,6 +69,11 @@ export default function ResetPassword({ navigation }) {
           />
         </TouchableOpacity>
       </View>
+        {newPassword && confirmPassword && newPassword !== confirmPassword && (
+        <Text style={{position: "center", color: "red", marginBottom: 10 }}>
+          Passwords do not match.
+        </Text>
+      )}
 
       <TouchableOpacity
         style={[
@@ -87,6 +91,8 @@ export default function ResetPassword({ navigation }) {
       >
         <Text style={styles.buttonText}>Verify</Text>
       </TouchableOpacity>
+
+
     </SafeAreaView>
   );
 }
@@ -95,7 +101,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "black",
+    backgroundColor: "white",
   },
   backcontainer: {
     flexDirection: "row",
@@ -104,7 +110,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 30,
-    color: "white",
+    color: "black",
     borderColor: "#eee1e1ff",
     borderWidth: 2,
     borderRadius: 50,
@@ -122,24 +128,22 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: "500",
     fontSize: 32,
-
     marginBottom: 10,
     fontFamily: "DM",
-    color: "white",
+    color: "black",
   },
   subtitle: {
     fontSize: 16,
     color: "#0000008F",
     marginBottom: 20,
     fontFamily: "DM",
-    color: "white",
+    color: "#666",
   },
   enter: {
     fontSize: 16,
-    color: "white",
+    color: "#666",
     marginBottom: 10,
     fontFamily: "DM",
-    color: "white",
   },
   inputContainer: {
     flexDirection: "row",
@@ -148,14 +152,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 70,
     marginBottom: 30,
-    color: "white",
+    color: "black",
     paddingHorizontal: 10,
   },
   input1: {
     flex: 1,
     height: 50,
     fontSize: 16,
-    color: "white",
+    color: "black",
     fontFamily: "DM",
   },
   iconInsideInput: {

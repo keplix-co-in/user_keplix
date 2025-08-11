@@ -11,10 +11,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen({ navigation }) {
-  const [phone, setphone] = useState("");
-  const isFilled = phone.trim() == '';   //phone.trim().length === 10 && /^\d{10}$/.test(phone.trim()); add this to isFilled
+  const [input, setInput] = useState("");
+  // Validation for 10-digit phone or valid Gmail address
+  const isValidPhone = /^\d{10}$/.test(input);
+  const isValidEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+    input
+  );
+  const isFilled = isValidPhone || isValidEmail;
+
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity style={styles.skipbutton} onPress={() => navigation.navigate("Homepage")}>
+        <Text style={styles.skiptext}>
+          skip
+        </Text>
+      </TouchableOpacity>
+
       <View style={styles.imagelogo}>
         <View style={styles.imagePlaceholder}></View>
       </View>
@@ -34,16 +46,20 @@ export default function LoginScreen({ navigation }) {
             source={{ uri: "https://flagcdn.com/w40/in.png" }}
             style={styles.flagIcon}
           />
-          <Text style={styles.countryCodeText}>+91</Text>
+          {/* <Text style={styles.countryCodeText}>+91</Text> */}
         </TouchableOpacity>
 
         <TextInput
           style={styles.phoneInput}
-          placeholder="Enter phone number"
+          placeholder="Enter 10-digit phone or Gmail"
           placeholderTextColor="#888"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setphone}
+          keyboardType="default"
+          value={input}
+          onChangeText={(text) => {
+            // Optional: You can auto-uppercase block here if needed.
+            setInput(text.trim());
+          }}
+          autoCapitalize="none" // disables auto-uppercase
         />
       </View>
 
@@ -51,14 +67,24 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.signInText}>Enter</Text>
       </TouchableOpacity> */}
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={[
           styles.signInButton,
           isFilled ? { backgroundColor: "red" } : { backgroundColor: "grey" },
         ]}
         onPress={() => navigation.navigate("SignIn")}
       >
-        <Text style={styles.signInText}>Continue with email </Text>
+        <Text style={styles.signInText}>Continue</Text>
+      </TouchableOpacity> */}
+      <TouchableOpacity
+        style={[
+          styles.signInButton,
+          { backgroundColor: isFilled ? "red" : "grey" },
+        ]}
+        onPress={() => navigation.navigate("Homepage")}
+        disabled={!isFilled}
+      >
+        <Text style={styles.signInText}>Continue</Text>
       </TouchableOpacity>
 
       <View style={styles.dividerContainer}>
@@ -76,13 +102,14 @@ export default function LoginScreen({ navigation }) {
             style={[styles.icon1, { tintColor: "black" }]}
           />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
+        <TouchableOpacity style={styles.socialButton} onPress={()=> navigation.navigate("SignIn")}>
           <Image
             source={{
               uri: "https://img.icons8.com/color/48/000000/google-logo.png",
             }}
             style={styles.icon}
           />
+           
         </TouchableOpacity>
         <TouchableOpacity style={styles.socialButton2}>
           <Image
@@ -104,6 +131,17 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  skipbutton:{
+    position : "absolute",
+    top:20,
+    right:20,
+    padding: 10,
+  },
+  skiptext:{
+    fontSize: 18,
+    color: "black",
+    fontWeight: "500",
+  },
   imagelogo: {
     width: 260,
     height: 200,
@@ -119,28 +157,28 @@ const styles = StyleSheet.create({
     width: 360,
     height: 60,
     borderWidth: 1,
-    borderColor: "#fff",
+    borderColor: "black",
     borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 15,
     marginTop: 20,
     marginBottom: 20,
-    backgroundColor: "#000",
+    backgroundColor: "white",
   },
 
-  countrySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 10,
-  },
+  // countrySelector: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   marginRight: 10,
+  // },
 
-  flagIcon: {
-    width: 24,
-    height: 16,
-    borderRadius: 2,
-    marginRight: 6,
-  },
+  // flagIcon: {
+  //   width: 24,
+  //   height: 16,
+  //   borderRadius: 2,
+  //   marginRight: 6,
+  // },
 
   countryCodeText: {
     color: "white",
@@ -150,14 +188,14 @@ const styles = StyleSheet.create({
 
   phoneInput: {
     flex: 1,
-    color: "white",
+    color: "black",
     fontSize: 16,
     fontFamily: "DM",
   },
 
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
     fontFamily: "DM",
@@ -183,11 +221,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     fontWeight: "500",
     fontFamily: "DM",
-    color: "white",
+    color: "black",
   },
   highlight: {
     // color: '#4E46B4',
-    color: "white",
+    color: "black",
     fontFamily: "DM",
   },
   subtitleContainer: {
@@ -251,9 +289,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   socialButton1: {
-    width: 100,
+      width: 100,
     height: 50,
-    backgroundColor: "white",
+    backgroundColor: "#fff",
+    borderColor: "#E2E2E2",
+    borderWidth: 2,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
@@ -280,11 +320,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 15,
-    color: "white",
-    marginBottom: 30,
+    color: "black",
     textAlign: "center",
-    marginTop: 20,
-    padding: 20,
+    marginBottom: 110,
+    padding: 10,
     fontFamily: "DM",
   },
   link: {
