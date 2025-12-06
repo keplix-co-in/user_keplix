@@ -1,58 +1,61 @@
 // // export default ServicesCard;
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Ionicons,
   MaterialCommunityIcons,
-  FontAwesome5,
 } from "@expo/vector-icons";
 import Footer from "../Footer/Footer";
+import {
+  FontAwesome5,
+} from "@expo/vector-icons";
+import { servicesAPI } from '../../services/api';
 // 🔻 CategoryToggle pill component
 const CategoryToggle = ({ iconName, title, description, isExpanded, onPress }) => (
-  <View style={styles.categorycontainer}>
-    <View style={styles.leftSection}>
-      <Ionicons name={iconName} style={styles.iconStyle} size={30} color="black" />
-      <View style={styles.textContainer}>
-        <Text style={styles.categoryTitle}>{title}</Text>
-        <Text style={styles.categoryDescription}>{description}</Text>
+  <TouchableOpacity 
+    onPress={onPress}
+    className="w-full flex-row justify-between items-center mb-4 bg-white rounded-2xl border border-[#E8E8E8] py-5 px-4"
+  >
+    <View className="flex-row items-center flex-1 gap-3">
+      <View className="w-12 h-12 bg-gray-100 rounded-xl items-center justify-center">
+        <Ionicons name={iconName} size={24} color="#374151" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-lg font-semibold font-dm text-gray-900">{title}</Text>
+        <Text className="text-sm font-dm text-gray-500 mt-0.5">{description}</Text>
       </View>
     </View>
-    <TouchableOpacity onPress={onPress}>
-      <View style={[styles.button , {borderColor : isExpanded ? "red" : "#666"}]}>
-        <Ionicons
-          name={isExpanded ? "chevron-up" : "chevron-down"}
-          size={25}
-          color="white"
-          style={[styles.dropdownIcon ]}
-        />
-      </View>
-    </TouchableOpacity>
-  </View>
+    <View className={`w-9 h-9 rounded-full items-center justify-center ${isExpanded ? 'bg-red-600' : 'bg-gray-100'}`}>
+      <Ionicons
+        name={isExpanded ? "chevron-up" : "chevron-down"}
+        size={20}
+        color={isExpanded ? "#FFF" : "#374151"}
+      />
+    </View>
+  </TouchableOpacity>
 );
 
 // 🔻 Category Grid Section
 const CategorySection = ({ title, items, navigation }) => (
-  <View style={styles.categorySection}>
-    <View style={styles.sectionHeader}>
-      <Text style={styles.categoryTitle}>{title}</Text>
-    </View>
-    <View style={styles.gridContainer}>
+  <View className="mb-6 px-1">
+    <View className="flex-row flex-wrap justify-between">
       {items.map((item, index) => (
         <TouchableOpacity
           key={index}
-          style={styles.gridItem}
+          className="flex-col w-[31%] bg-white border border-[#E8E8E8] p-4 rounded-2xl items-center mb-3"
           onPress={() => navigation.navigate("ProviderList")}
         >
           {item.icon}
-          <Text style={styles.gridText}>{item.text}</Text>
+          <Text className="mt-2 text-sm font-semibold font-dm text-gray-900 text-center">{item.text}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -62,80 +65,171 @@ const CategorySection = ({ title, items, navigation }) => (
 // 🔻 Bottom Navigation Item
 const NavItem = ({ icon, text, active, navigation, targetScreen }) => (
   <TouchableOpacity
-    style={styles.navItem}
+    className="items-center"
     onPress={() => navigation.navigate(targetScreen)}
   >
-    <Ionicons name={icon} size={34} color={active ? "#4E46B4" : "#666"} />
-    <Text style={[styles.navText, active && styles.activeNavText]}>{text}</Text>
+    <Ionicons name={icon} size={34} color={active ? "#DC2626" : "#666"} />
+    <Text className={`text-xs mt-1.5 ${active ? 'text-[#DC2626]' : 'text-[#666]'}`}>{text}</Text>
   </TouchableOpacity>
 );
 
 // 🔻 Main Screen Component
 export default function ServicesCard({ navigation }) {
   const [expandedSection, setExpandedSection] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState({
+    cleaning: [],
+    repairs: [],
+    inspection: []
+  });
 
-  const repairItems = [
-    {
-      icon: <MaterialCommunityIcons name="engine" size={34} color="#000" />,
-      text: "Engine",
-    },
-    { icon: <Ionicons name="disc" size={34} color="#000" />, text: "Brakes" },
-    {
-      icon: <FontAwesome5 name="cogs" size={34} color="#000" />,
-      text: "Gearbox",
-    },
-  ];
+  useEffect(() => {
+    loadServices();
+  }, []);
 
-  const cleaningItems = [
-    {
-      icon: <Ionicons name="water" size={34} color="#000" />,
-      text: "Car Wash",
-    },
-    {
-      icon: <Ionicons name="water" size={34} color="#000" />,
-      text: "Foam Wash",
-    },
-    { icon: <Ionicons name="car" size={34} color="#000" />, text: "Interior" },
-  ];
+  const loadServices = async () => {
+    try {
+      const response = await servicesAPI.getAllServices();
+      if (response.data) {
+        setServices(response.data);
+        categorizeServices(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading services:', error);
+      // Fallback to hardcoded services if API fails
+      setDefaultServices();
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const inspectionItems = [
-    {
-      icon: <Ionicons name="search" size={34} color="#000" />,
-      text: "Check Engine",
-    },
-    {
-      icon: <Ionicons name="speedometer" size={34} color="#000" />,
-      text: "Performance",
-    },
-    { icon: <Ionicons name="alert" size={34} color="#000" />, text: "Safety" },
-  ];
+  const categorizeServices = (servicesData) => {
+    const cleaning = servicesData.filter(s => 
+      s.category?.toLowerCase() === 'cleaning' || 
+      s.name?.toLowerCase().includes('wash') || 
+      s.name?.toLowerCase().includes('clean')
+    );
+    
+    const repairs = servicesData.filter(s => 
+      s.category?.toLowerCase() === 'repairs' || 
+      s.name?.toLowerCase().includes('repair') || 
+      s.name?.toLowerCase().includes('engine') ||
+      s.name?.toLowerCase().includes('brake')
+    );
+    
+    const inspection = servicesData.filter(s => 
+      s.category?.toLowerCase() === 'inspection' || 
+      s.name?.toLowerCase().includes('check') || 
+      s.name?.toLowerCase().includes('inspection')
+    );
+
+    setCategories({ cleaning, repairs, inspection });
+  };
+
+  const setDefaultServices = () => {
+    // Fallback hardcoded services
+    const repairItems = [
+      {
+        icon: <MaterialCommunityIcons name="engine" size={34} color="#000" />,
+        text: "Engine",
+        id: 'engine-1'
+      },
+      { icon: <Ionicons name="disc" size={34} color="#000" />, text: "Brakes", id: 'brakes-1' },
+      {
+        icon: <FontAwesome5 name="cogs" size={34} color="#000" />,
+        text: "Gearbox",
+        id: 'gearbox-1'
+      },
+    ];
+
+    const cleaningItems = [
+      {
+        icon: <Ionicons name="water" size={34} color="#000" />,
+        text: "Car Wash",
+        id: 'carwash-1'
+      },
+      {
+        icon: <Ionicons name="water" size={34} color="#000" />,
+        text: "Foam Wash",
+        id: 'foamwash-1'
+      },
+      { icon: <Ionicons name="car" size={34} color="#000" />, text: "Interior", id: 'interior-1' },
+    ];
+
+    const inspectionItems = [
+      {
+        icon: <Ionicons name="search" size={34} color="#000" />,
+        text: "Check Engine",
+        id: 'check-1'
+      },
+      {
+        icon: <Ionicons name="speedometer" size={34} color="#000" />,
+        text: "Performance",
+        id: 'performance-1'
+      },
+      { icon: <Ionicons name="alert" size={34} color="#000" />, text: "Safety", id: 'safety-1' },
+    ];
+
+    setCategories({
+      cleaning: cleaningItems,
+      repairs: repairItems,
+      inspection: inspectionItems
+    });
+  };
+
+  const getServiceIcon = (serviceName) => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('engine')) return <MaterialCommunityIcons name="engine" size={34} color="#000" />;
+    if (name.includes('brake')) return <Ionicons name="disc" size={34} color="#000" />;
+    if (name.includes('gear')) return <FontAwesome5 name="cogs" size={34} color="#000" />;
+    if (name.includes('wash')) return <Ionicons name="water" size={34} color="#000" />;
+    if (name.includes('interior')) return <Ionicons name="car" size={34} color="#000" />;
+    if (name.includes('check')) return <Ionicons name="search" size={34} color="#000" />;
+    if (name.includes('performance')) return <Ionicons name="speedometer" size={34} color="#000" />;
+    if (name.includes('safety')) return <Ionicons name="alert" size={34} color="#000" />;
+    return <Ionicons name="construct" size={34} color="#000" />;
+  };
+
+  const formatServiceItems = (servicesList) => {
+    return servicesList.map(service => ({
+      icon: getServiceIcon(service.name || service.text),
+      text: service.name || service.text,
+      id: service.id,
+      ...service
+    }));
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#DC2626" />
+        <Text className="mt-4 text-base text-[#666] font-['DM']">Loading services...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+      <View className="flex-row items-center justify-between mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("SearchPage")}
-            style={styles.headerIconButton}
-          >
-            <Ionicons name="search-outline" style={styles.icon} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("HamburgerMenu")}
-            style={styles.headerIconButton}
-          >
-            <Ionicons name="menu-outline" style={styles.icon} />
-          </TouchableOpacity>
-        </View>
+        <Text className="text-2xl font-semibold text-gray-900 font-dm">Services</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("SearchPage")}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="search-outline" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView>
         <CategoryToggle
-        style={styles.categorycontainer}
           iconName="brush"
           title="Cleaning"
           description="Interior & exterior cleaning services"
@@ -147,7 +241,7 @@ export default function ServicesCard({ navigation }) {
         {expandedSection === "Cleaning" && (
           <CategorySection
             title="Cleaning"
-            items={cleaningItems}
+            items={formatServiceItems(categories.cleaning)}
             navigation={navigation}
           />
         )}
@@ -164,7 +258,7 @@ export default function ServicesCard({ navigation }) {
         {expandedSection === "Repairs" && (
           <CategorySection
             title="Repairs"
-            items={repairItems}
+            items={formatServiceItems(categories.repairs)}
             navigation={navigation}
           />
         )}
@@ -181,7 +275,7 @@ export default function ServicesCard({ navigation }) {
         {expandedSection === "Inspection" && (
           <CategorySection
             title="Inspection"
-            items={inspectionItems}
+            items={formatServiceItems(categories.inspection)}
             navigation={navigation}
           />
         )}
@@ -215,155 +309,6 @@ export default function ServicesCard({ navigation }) {
         />
       </View> */}
       <Footer navigation={navigation} />
-      
     </SafeAreaView>
   );
 }
-
-// 🔻 Styles
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-    padding: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    justifyContent: "space-between",
-  },
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIconButton: {
-    marginLeft: 10,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-    color: "black",
-  },
-  categorySection: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    color: "white",
-  },
-  categorycontainer: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    backgroundColor: "white",
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#c9b9b9ff",
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-  },
-  leftSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  iconStyle: {
-    marginLeft: 12,
-    marginRight: 12,
-  },
-  textContainer: {
-    marginRight: 10,
-    flex: 1,
-  },
-  categoryTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    fontFamily: "DM",
-    color: "black",
-  },
-  categoryDescription: {
-    fontSize: 14,
-    fontWeight: "400",
-    fontFamily: "DM",
-    color: "#B0B0B0",
-    flexWrap: "wrap",
-  },
-  button: {
-    width: 50,
-    height: 35,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
-    backgroundColor: "white",
-    marginRight: 10,
-    marginLeft: 10,
-    borderWidth: 2,
-    borderColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  dropdownIcon: {
-    color: "black",
-    marginRight: 10,
-    marginLeft: 10,
-  },
-  gridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  gridItem: {
-    flexDirection: "column",
-    width: "30%",
-    // backgroundColor: "#c8eaff",
-    backgroundColor:"#e3eaeeff",
-    borderColor: "#666",
-    padding: 15,
-    borderRadius: 16,
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  gridText: {
-    marginTop: 8,
-    fontSize: 16,
-    fontWeight: "500",
-    fontFamily: "DM",
-    color: "#0000008F",
-    textAlign: "center",
-  },
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 15,
-    backgroundColor: "white",
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  navItem: {
-    alignItems: "center",
-  },
-  navText: {
-    color: "#666",
-    fontSize: 12,
-    marginTop: 5,
-  },
-  activeNavText: {
-    color: "#4E46B4",
-  },
-});

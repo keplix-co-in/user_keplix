@@ -3,25 +3,21 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Fontisto from "react-native-vector-icons/Fontisto";
-
-const savedCards = {
-  "1234567890123456": {
-    name: "Nithish Kumar",
-    validThru: "01/2024",
-  },
-};
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Payment2({ navigation }) {
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(true); // Default to true for saving
   const [focusedField, setFocusedField] = useState(null);
   const [errorField, setErrorField] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: "",
     cvv: "",
@@ -31,20 +27,23 @@ export default function Payment2({ navigation }) {
 
   const handleCardNumberChange = (text) => {
     const formattedText = text.replace(/[^0-9]/g, "");
-    const isValid = savedCards[formattedText] !== undefined;
-    setErrorField(isValid ? null : "cardNumber");
+    setErrorField(null);
     setCardDetails((prev) => ({
       ...prev,
       cardNumber: formattedText,
-      ...(isValid ? savedCards[formattedText] : { name: "", validThru: "" }),
     }));
   };
 
   const handleInputChange = (field, value) => {
     if (field === "validThru") {
+      // Auto-format date as MM/YYYY
+      let formattedValue = value.replace(/[^0-9]/g, "");
+      if (formattedValue.length >= 2) {
+        formattedValue = formattedValue.substring(0, 2) + "/" + formattedValue.substring(2, 6);
+      }
       setCardDetails((prev) => ({
         ...prev,
-        [field]: value, // allow non-digit like '/' for date
+        [field]: formattedValue,
       }));
     } else {
       setCardDetails((prev) => ({
@@ -52,6 +51,105 @@ export default function Payment2({ navigation }) {
         [field]: value.replace(/[^0-9]/g, ""),
       }));
     }
+  };
+
+  const validateCard = () => {
+    // Validate card number (Luhn algorithm would be ideal)
+    if (cardDetails.cardNumber.length !== 16) {
+      setErrorField("cardNumber");
+      Alert.alert("Invalid Card", "Card number must be 16 digits");
+      return false;
+    }
+
+    // Validate CVV
+    if (cardDetails.cvv.length !== 3) {
+      Alert.alert("Invalid CVV", "CVV must be 3 digits");
+      return false;
+    }
+
+    // Validate expiry date
+    const expiryParts = cardDetails.validThru.split('/');
+    if (expiryParts.length !== 2 || expiryParts[0].length !== 2 || expiryParts[1].length !== 4) {
+      Alert.alert("Invalid Date", "Please enter valid expiry date (MM/YYYY)");
+      return false;
+    }
+
+    const month = parseInt(expiryParts[0]);
+    const year = parseInt(expiryParts[1]);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    if (month < 1 || month > 12) {
+      Alert.alert("Invalid Month", "Month must be between 01 and 12");
+      return false;
+    }
+
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+      Alert.alert("Expired Card", "Card has expired");
+      return false;
+    }
+
+    // Validate name
+    if (cardDetails.name.trim().length < 3) {
+      Alert.alert("Invalid Name", "Please enter cardholder name");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleAddCard = async () => {
+    if (!validateCard()) return;
+
+    setLoading(true);
+
+    try {
+      // Get existing payment methods
+      const savedMethods = await AsyncStorage.getItem('payment_methods');
+      const methods = savedMethods ? JSON.parse(savedMethods) : { cards: [], default: 'card' };
+
+      // Create card object
+      const newCard = {
+        cardNumber: `**** **** **** ${cardDetails.cardNumber.slice(-4)}`,
+        fullCardNumber: cardDetails.cardNumber, // Store for validation (in production, never store full card number)
+        bankName: getCardBrand(cardDetails.cardNumber),
+        expiryDate: cardDetails.validThru,
+        cardholderName: cardDetails.name,
+        addedDate: new Date().toISOString(),
+      };
+
+      // Add new card
+      if (!methods.cards) methods.cards = [];
+      methods.cards.push(newCard);
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('payment_methods', JSON.stringify(methods));
+
+      Alert.alert(
+        'Success',
+        'Card added successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('ConfirmUpdate'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving card:', error);
+      Alert.alert('Error', 'Failed to add card. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCardBrand = (cardNumber) => {
+    const firstDigit = cardNumber.charAt(0);
+    if (firstDigit === '4') return 'Visa';
+    if (firstDigit === '5') return 'Mastercard';
+    if (firstDigit === '3') return 'American Express';
+    if (firstDigit === '6') return 'Discover';
+    return 'Credit Card';
   };
 
   const isAddEnabled =
@@ -62,54 +160,47 @@ export default function Payment2({ navigation }) {
 
   const CheckboxComponent = () => (
     <TouchableOpacity
-      style={styles.checkboxContainer}
+      className="flex-row items-center mt-[15px]"
       onPress={() => setIsSaved(!isSaved)}
     >
-      <View style={[styles.checkbox, isSaved && styles.checkboxChecked]}>
-        {isSaved && <Text style={styles.checkmark}>✓</Text>}
+      <View className={`w-5 h-5 border rounded items-center justify-center mr-2 ${isSaved ? 'bg-black border-black' : 'border-[#E2E2E2]'}`}>
+        {isSaved && <Text className="text-white text-sm">✓</Text>}
       </View>
-      <Text style={styles.checkboxText}>Save details for future</Text>
+      <Text className="text-sm text-[#666] font-['DM']">Save details for future</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
+        <View className="flex-row items-center mb-5 p-5">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+            <Ionicons name={"arrow-back-outline"} size={24} className="border-2 border-[#E2E2E2] rounded-full p-[5px]" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Payment</Text>
-        <Text style={styles.subtitle}>Select payment method</Text>
+        <Text className="text-2xl font-['DM'] font-medium ml-[23px]">Payment</Text>
+        <Text className="text-base text-[#666] mb-[30px] font-medium font-['DM'] ml-5">Select payment method</Text>
 
-        <View style={styles.cardContainer}>
-          <View style={styles.inputGroup}>
-            <View style={styles.menuItem}>
+        <View className="py-[15px] px-[15px] w-[92%] ml-[15px] border-2 border-[#E2E2E2] rounded-2xl mb-5 p-5">
+          <View className="mb-5">
+            <View className="flex-row items-center py-[5px] mb-5 bg-white">
               <Fontisto
                 name="credit-card"
                 size={20}
                 color="#000"
-                style={styles.menuIcon}
+                className="mr-2.5"
               />
-              <Text style={styles.menuText}>Debit / Credit Card</Text>
+              <Text className="text-xl font-medium text-[#1E1E1E] font-['DM']">Debit / Credit Card</Text>
             </View>
 
             <Text
-              style={[
-                styles.label,
-                focusedField === "cardNumber" && styles.focusedLabel,
-              ]}
+              className={`text-sm mb-[5px] font-medium font-['DM'] ${focusedField === "cardNumber" ? 'text-[#DC2626]' : 'text-black'}`}
             >
               Card Number
             </Text>
             <TextInput
-              style={[
-                styles.input,
-                focusedField === "cardNumber" && styles.focusedInput,
-                errorField === "cardNumber" && styles.errorInput,
-              ]}
+              className={`border rounded-lg p-2.5 text-sm font-normal font-['DM'] ${focusedField === "cardNumber" ? 'border-[#DC2626]' : errorField === "cardNumber" ? 'border-red-600' : 'border-[#E2E2E2]'}`}
               placeholder="xxxx-xxxx-xxxx-xxxx"
               keyboardType="numeric"
               value={cardDetails.cardNumber}
@@ -119,25 +210,19 @@ export default function Payment2({ navigation }) {
               onBlur={() => setFocusedField(null)}
             />
             {errorField === "cardNumber" && (
-              <Text style={styles.errorText}>Invalid Card Number</Text>
+              <Text className="text-red-600 text-xs mt-[5px]">Invalid Card Number</Text>
             )}
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+          <View className="flex-row justify-between">
+            <View className="mb-5 w-[48%]">
               <Text
-                style={[
-                  styles.label,
-                  focusedField === "cvv" && styles.focusedLabel,
-                ]}
+                className={`text-sm mb-[5px] font-medium font-['DM'] ${focusedField === "cvv" ? 'text-[#DC2626]' : 'text-black'}`}
               >
                 CVV/CVC No.
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "cvv" && styles.focusedInput,
-                ]}
+                className={`border rounded-lg p-2.5 text-sm font-normal font-['DM'] ${focusedField === "cvv" ? 'border-[#DC2626]' : 'border-[#E2E2E2]'}`}
                 placeholder="OOO"
                 maxLength={3}
                 keyboardType="numeric"
@@ -147,20 +232,14 @@ export default function Payment2({ navigation }) {
                 onBlur={() => setFocusedField(null)}
               />
             </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
+            <View className="mb-5 w-[48%]">
               <Text
-                style={[
-                  styles.label,
-                  focusedField === "validThru" && styles.focusedLabel,
-                ]}
+                className={`text-sm mb-[5px] font-medium font-['DM'] ${focusedField === "validThru" ? 'text-[#DC2626]' : 'text-black'}`}
               >
                 Valid Thru
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "validThru" && styles.focusedInput,
-                ]}
+                className={`border rounded-lg p-2.5 text-sm font-normal font-['DM'] ${focusedField === "validThru" ? 'border-[#DC2626]' : 'border-[#E2E2E2]'}`}
                 placeholder="mm/yyyy"
                 maxLength={7}
                 keyboardType="default"
@@ -172,20 +251,14 @@ export default function Payment2({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
+          <View className="mb-5">
             <Text
-              style={[
-                styles.label,
-                focusedField === "name" && styles.focusedLabel,
-              ]}
+              className={`text-sm mb-[5px] font-medium font-['DM'] ${focusedField === "name" ? 'text-[#DC2626]' : 'text-black'}`}
             >
               Full Name
             </Text>
             <TextInput
-              style={[
-                styles.input,
-                focusedField === "name" && styles.focusedInput,
-              ]}
+              className={`border rounded-lg p-2.5 text-sm font-normal font-['DM'] ${focusedField === "name" ? 'border-[#DC2626]' : 'border-[#E2E2E2]'}`}
               placeholder="Name"
               value={cardDetails.name}
               onChangeText={(text) =>
@@ -201,162 +274,16 @@ export default function Payment2({ navigation }) {
       </ScrollView>
 
       <TouchableOpacity
-        style={[
-          styles.addButton,
-          isAddEnabled && styles.addButtonEnabled,
-        ]}
-        disabled={!isAddEnabled}
-        onPress={() => navigation.navigate("ConfirmUpdate")}
+        className={`rounded-[70px] py-[15px] mx-5 items-center mb-5 w-[90%] ${isAddEnabled && !loading ? 'bg-[#DC2626]' : 'bg-[#0000008F]'}`}
+        disabled={!isAddEnabled || loading}
+        onPress={handleAddCard}
       >
-        <Text style={styles.addButtonText}>Add Bank Account</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-semibold font-['DM']">Add Card</Text>
+        )}
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginLeft: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: "DM",
-    fontWeight: "500",
-    marginLeft: 23,
-  },
-  cardContainer: {
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    width: "92%",
-    marginLeft: 15,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 16,
-    marginBottom: 20,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 5,
-    marginBottom: 20,
-    backgroundColor: "#fff",
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuText: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#1E1E1E",
-    fontFamily: "DM",
-  },
-  label: {
-    fontSize: 14,
-    color: "#000000",
-    marginBottom: 5,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E2E2E2",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    fontWeight: "400",
-    fontFamily: "DM",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  halfWidth: {
-    width: "48%",
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 15,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: "#E2E2E2",
-    borderRadius: 4,
-    marginRight: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  checkboxText: {
-    fontSize: 14,
-    color: "#666",
-    fontFamily: "DM",
-  },
-  addButton: {
-    backgroundColor: "#0000008F",
-    borderRadius: 70,
-    paddingVertical: 15,
-    marginHorizontal: 20,
-    alignItems: "center",
-    marginBottom: 20,
-    width: "90%",
-  },
-  addButtonEnabled: {
-    backgroundColor: "#4E46B4",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "DM",
-  },
-  errorInput: {
-    borderColor: "red",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 12,
-    marginTop: 5,
-  },
-  focusedInput: {
-    borderColor: "#4E46B4",
-  },
-  focusedLabel: {
-    color: "#4E46B4",
-  },
-});

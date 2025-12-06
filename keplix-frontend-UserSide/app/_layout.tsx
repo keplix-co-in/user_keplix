@@ -1,3 +1,4 @@
+import "../global.css";
 import {useFonts} from "expo-font";
 import { createStackNavigator } from "@react-navigation/stack";
 import LoginScreen from "@/components/SignUps/Login";
@@ -60,6 +61,9 @@ import EnableTwoFactor from "@/components/Security/EnableTwoFactor"
 import AddEmail from "@/components/Security/AddEmail"
 import TwoFactorConfirm from "@/components/Security/TwoFactorConfirm"
 import TwoFactorAuthOFF from "@/components/Security/TwoFactorAuthOFF"
+import Filters from "@/components/Services/Filters"
+import ChatSupport from "@/components/Support&Help/ChatSupport"
+import ScreenTester from "@/components/TestScreens/ScreenTester"
 
 const Stack = createStackNavigator();
 
@@ -133,6 +137,9 @@ export default function RootLayout() {
         <Stack.Screen name="AddEmail" component={AddEmail} />
         <Stack.Screen name="TwoFactorConfirm" component={TwoFactorConfirm} />
         <Stack.Screen name="TwoFactorAuthOFF" component={TwoFactorAuthOFF} />
+        <Stack.Screen name="Filters" component={Filters} />
+        <Stack.Screen name="ChatSupport" component={ChatSupport} />
+        <Stack.Screen name="ScreenTester" component={ScreenTester} />
 
         </Stack.Navigator>
    

@@ -4,14 +4,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function EnableTwoFactor({ navigation }) {
   const [pin, setPin] = useState(['', '', '', '', '', '']);
+  const [saving, setSaving] = useState(false);
 
   const handleChange = (value, index) => {
     const newPin = [...pin];
@@ -29,28 +32,53 @@ export default function EnableTwoFactor({ navigation }) {
 
   const isComplete = pin.every((val) => val !== '');
 
+  const handleSave = async () => {
+    if (!isComplete) return;
+
+    setSaving(true);
+    try {
+      const pinCode = pin.join('');
+      
+      // Save 2FA settings to AsyncStorage
+      const twoFactorSettings = {
+        enabled: true,
+        pin: pinCode,
+        enabledAt: new Date().toISOString(),
+      };
+      
+      await AsyncStorage.setItem('two_factor_settings', JSON.stringify(twoFactorSettings));
+      
+      navigation.navigate('AddEmail');
+    } catch (error) {
+      console.error('Error saving 2FA settings:', error);
+      Alert.alert('Error', 'Failed to enable two-factor authentication');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <SafeAreaView className="flex-1 px-6 bg-white">
+      <View className="mt-5 mb-10">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 rounded-[20px] border-2 border-[#E2E2E2] justify-center items-center">
           <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Two-Factor Authentication</Text>
+      <Text className="text-xl font-medium text-center mb-[30px] font-['DM'] text-black">Two-Factor Authentication</Text>
 
-      <View style={styles.iconContainer}>
-        <MaterialCommunityIcons name="checkbox-multiple-marked-outline" size={40} color="#4E46B4" />
+      <View className="items-center mb-5">
+        <MaterialCommunityIcons name="checkbox-multiple-marked-outline" size={40} color="#DC2626" />
       </View>
 
-      <Text style={styles.description}>Enter your new 6 digit pin.</Text>
+      <Text className="text-sm text-center text-[#0000008F] font-['DM'] mb-5">Enter your new 6 digit pin.</Text>
 
-      <View style={styles.pinContainer}>
+      <View className="flex-row justify-between mx-5 mb-10">
         {pin.map((digit, index) => (
           <TextInput
             key={index}
             ref={(ref) => (refs[`pin${index}`] = ref)}
-            style={[styles.pinBox, digit ? styles.filled : styles.empty]}
+            className={`w-12 h-12 text-center text-xl border-2 rounded-lg font-['DM'] ${digit ? 'border-[#DC2626] text-black' : 'border-[#E2E2E2] text-black'}`}
             maxLength={1}
             keyboardType="numeric"
             value={digit}
@@ -59,101 +87,19 @@ export default function EnableTwoFactor({ navigation }) {
         ))}
       </View>
 
-      <View style={styles.buttonWrapper}>
+      <View className="mt-auto mb-5">
         <TouchableOpacity
-          style={[styles.button, isComplete ? styles.buttonEnabled : styles.buttonDisabled]}
-          disabled={!isComplete}
-          onPress={() => navigation.navigate('AddEmail')}
+          className={`rounded-[70px] py-4 items-center ${isComplete ? 'bg-[#DC2626]' : 'bg-gray-500'}`}
+          disabled={!isComplete || saving}
+          onPress={handleSave}
         >
-          <Text style={styles.buttonText}>Save</Text>
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-base font-medium font-['DM']">Save</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
-
-const BOX_SIZE = 48;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    backgroundColor: '#fff',
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 30,
-    fontFamily: 'DM',
-    color: '#000',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  description: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#0000008F',
-    fontFamily: 'DM',
-    marginBottom: 20,
-  },
-  pinContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  pinBox: {
-    width: BOX_SIZE,
-    height: BOX_SIZE,
-    textAlign: 'center',
-    fontSize: 20,
-    borderWidth: 2,
-    borderRadius: 8,
-    fontFamily: 'DM',
-  },
-  filled: {
-    borderColor: '#4E46B4',
-    color: '#000',
-  },
-  empty: {
-    borderColor: '#E2E2E2',
-    color: '#000',
-  },
-  buttonWrapper: {
-    marginTop: 'auto',
-    marginBottom: 20,
-  },
-  button: {
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  buttonEnabled: {
-    backgroundColor: '#4E46B4',
-  },
-  buttonDisabled: {
-    backgroundColor: 'gray',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-});

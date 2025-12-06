@@ -4,48 +4,79 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { authAPI } from '../../services/api';
 
 export default function SignUpPhone({ navigation }) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isPhoneValid = /^\d{10}$/.test(phoneNumber);
   const isFormValid = phoneNumber.trim() && isPhoneValid;
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     setSubmitted(true);
-    if (isFormValid) {
-      navigation.navigate("SendOtp");
+    if (!isFormValid) return;
+
+    setLoading(true);
+
+    try {
+      // Send phone OTP
+      const fullPhoneNumber = `+91${phoneNumber}`;
+      await authAPI.sendPhoneOTP(fullPhoneNumber);
+
+      Alert.alert(
+        'Success',
+        'OTP has been sent to your phone number.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate("SendOtp", { phoneNumber: fullPhoneNumber }),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      
+      if (error.response?.data?.error) {
+        Alert.alert('Error', error.response.data.error);
+      } else if (error.message === 'Network Error') {
+        Alert.alert('Network Error', 'Please check your internet connection and ensure the backend server is running.');
+      } else {
+        Alert.alert('Error', 'Failed to send OTP. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.backcontainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 p-5 bg-white">
+      <View className="flex-row items-center mb-10">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Sign Up</Text>
-      <Text style={styles.subtitle}>
-        You will receive an OTP for verification once you enter your phone
-        number
+      <Text className="font-medium text-[32px] mb-1 font-['DM'] text-black">Sign Up</Text>
+      <Text className="text-sm text-[#999] mb-8 font-['DM']">
+        You will receive an OTP for verification once{'\n'}you enter your phone number
       </Text>
 
-      <View>
-        <Text style={styles.enter}>Enter your phone number</Text>
+      <View className="mt-4">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your phone number</Text>
         <TextInput
-          style={[
-            styles.input,
-            submitted && !isFormValid && { borderColor: "red" },
-          ]}
-          placeholder="+91"
-          placeholderTextColor="#aaa"
+          className={`h-[56px] border-2 rounded-2xl px-4 text-base text-black font-['DM'] ${submitted && !isFormValid ? 'border-red-600' : 'border-[#E8E8E8]'}`}
+          placeholder="+91 9763303254"
+          placeholderTextColor="#999"
           value={phoneNumber}
           onChangeText={setPhoneNumber}
           keyboardType="phone-pad"
@@ -53,128 +84,39 @@ export default function SignUpPhone({ navigation }) {
         />
       </View>
 
+      <View className="flex-1" />
+
       <TouchableOpacity
-        style={[styles.button,  { backgroundColor: isFormValid ? "red" : "grey" }]}
+        className={`rounded-full py-4 items-center mb-4 ${isFormValid && !loading ? 'bg-red-600' : 'bg-[#CCCCCC]'}`}
         onPress={handleSendOtp}
         activeOpacity={0.7}
+        disabled={loading}
       >
-        <Text
-          style={[
-            styles.buttonText,
-          ]}
-        >
-          Send Otp
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-medium font-['DM']">
+            Send OTP
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        onPress={() => navigation.navigate("SignUp")}
+      >
+        <Text className="text-center text-[#666] text-sm border-2 border-[#E8E8E8] py-4 px-6 rounded-full font-['DM']">
+          Sign up using{' '}
+          <Text className="text-red-600 font-medium font-['DM']">E-mail</Text>
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity>
-        <Text style={styles.createAccountText}>
-          or Sign up using
-          <Text styles={{ color: "red", fontWeight: 15 }}> E-mail</Text>
-        </Text>
-      </TouchableOpacity>
-
-      <Text style={styles.footerText}>
+      <Text className="text-xs text-[#999] text-center px-8 mt-5 mb-5 font-['DM']">
         By signing or logging in, you agree to the{" "}
-        <Text style={styles.link}>Terms and Conditions</Text> of service and{" "}
-        <Text style={styles.link}>Privacy Policy</Text>
+        <Text className="text-red-600 font-['DM']">Terms and Conditions</Text> of service and{" "}
+        <Text className="text-red-600 font-['DM']">Privacy Policy</Text>
       </Text>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "white",
-  },
-  backcontainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 30,
-    color: "black",
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-  },
-  text: {
-    fontSize: 24,
-    marginRight: 30,
-    color: "black",
-    fontFamily: "DM",
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  title: {
-    fontWeight: "500",
-    fontSize: 32,
-    marginBottom: 10,
-    fontFamily: "DM",
-    color: "black",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 20,
-    fontFamily: "DM",
-  },
-  enter: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 10,
-    fontFamily: "DM",
-  },
-  input: {
-    height: 50,
-    color: "black",
-    borderColor: "#ddd",
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 280,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    fontFamily: "DM",
-  },
-  button: {
-    backgroundColor: "red",
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  createAccountText: {
-    borderRadius: 70,
-    textAlign: "center",
-    color: "#666",
-    fontSize: 14,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    padding: 15,
-    fontFamily: "DM",
-  },
-  footerText: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 20,
-    padding: 20,
-    fontFamily: "DM",
-  },
-  link: {
-    color: "red",
-    textDecorationLine: "underline",
-    fontFamily: "DM",
-  },
-});
+

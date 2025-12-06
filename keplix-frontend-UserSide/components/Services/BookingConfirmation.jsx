@@ -1,270 +1,138 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Switch, Alert } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { bookingsAPI } from '../../services/api';
 
-export default function BookingConfirmation ({ navigation }){
+export default function BookingConfirmation ({ navigation, route }){
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
+  const [bookingData, setBookingData] = useState(null);
+
+  const bookingDetails = route?.params?.booking || {};
+
+  useEffect(() => {
+    loadBookingData();
+  }, []);
+
+  const loadBookingData = async () => {
+    try {
+      // If we have booking ID from params, fetch booking details
+      if (bookingDetails.id) {
+        const response = await bookingsAPI.getBookingDetails(bookingDetails.id);
+        if (response.data) {
+          setBookingData(response.data);
+        }
+      } else {
+        // Use data passed from previous screen
+        setBookingData(bookingDetails);
+      }
+    } catch (error) {
+      console.error('Error loading booking:', error);
+      setBookingData(bookingDetails); // Fallback to params
+    }
+  };
+
+  const handleAddToCalendar = () => {
+    // Calendar functionality - would integrate with device calendar
+    Alert.alert('Add to Calendar', 'This feature will add the booking to your device calendar');
+  };
+
+  const displayData = bookingData || bookingDetails;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       {/* Header */}
-     <View style={styles.header}>
-             <TouchableOpacity onPress={() => navigation.goBack()}>
-               <Ionicons name={"arrow-back-outline"} style={styles.icon} />
-             </TouchableOpacity>
-           </View>
-
-      <Text style={styles.title}>Booking Details</Text>
+      <View className="flex-row items-center justify-between px-5 mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text className="text-2xl font-bold font-dm text-gray-900">Booking Details</Text>
+        <View className="w-10" />
+      </View>
 
       {/* Notifications Toggle */}
-      <View style={styles.notificationContainer}>
-        <View style={styles.notificationLeft}>
-          <Ionicons name="notifications" size={30} color="black" />
-          <View style={styles.notificationText}>
-            <Text style={styles.notificationTitle}>Enable Notifications</Text>
-            <Text style={styles.notificationSubtitle}>(For the appointment - Optional)</Text>
+      <View className="bg-white flex-row justify-between items-center p-4 mx-5 border border-[#E8E8E8] rounded-2xl mb-5">
+        <View className="flex-row items-center flex-1">
+          <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+            <Ionicons name="notifications" size={24} color="#DC2626" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-semibold font-dm text-gray-900">Enable Notifications</Text>
+            <Text className="text-sm text-gray-500 font-dm">(For appointment updates)</Text>
           </View>
         </View>
         <Switch
           value={notificationsEnabled}
           onValueChange={setNotificationsEnabled}
-          trackColor={{ false: '#D1D1D6', true: '#5856D6' }}
+          trackColor={{ false: '#D1D1D6', true: '#DC2626' }}
           thumbColor={'#FFFFFF'}
         />
       </View>
 
-      <View style={styles.bookingCard}>
-        <View style={styles.serviceRow}>
-          <View style={styles.serviceLeft}>
-           <MaterialCommunityIcons name="engine" size={28} color="#000" />
-            <Text style={styles.serviceText}>Engine Repair</Text>
+      <View className="bg-white mx-5 border border-[#E8E8E8] rounded-2xl p-5">
+        <View className="flex-row items-center mb-5">
+          <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+            <MaterialCommunityIcons name="engine" size={24} color="#DC2626" />
+          </View>
+          <Text className="text-xl font-bold font-dm text-gray-900">
+            {displayData.service_name || 'Engine Repair'}
+          </Text>
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-sm text-gray-500 font-dm mb-2">Reference Number</Text>
+          <View className="px-4 py-2.5 border border-[#E8E8E8] bg-gray-50 rounded-full self-start">
+            <Text className="text-base font-semibold font-dm text-gray-900">
+              #{displayData.reference_number || displayData.id || '1517'}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.referenceRow}>
-          <Text style={styles.labelText}>Reference Number:</Text>
-          <View style={styles.referenceBox}>
-            <Text style={styles.referenceText}>1517</Text>
-          </View>
-        </View>
-
-        <Text style={styles.shopDetailsLabel}>Shop Details:</Text>
-        <Text style={styles.shopName}>Dwarka mor service</Text>
+        <Text className="text-sm text-gray-500 font-dm mb-2">Provider</Text>
+        <Text className="text-lg font-bold font-dm text-gray-900 mb-4">
+          {displayData.vendor_name || 'Dwarka mor service'}
+        </Text>
         
-        <View style={styles.detailsRow}>
-          <View style={styles.dateLocation}>
-            <Text style={styles.dateText}>26 June 2024 • 4:30PM</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={20} color="#0000008F" />
-              <Text style={styles.distanceText}>7 km away</Text>
+        <View className="flex-row justify-between items-center mb-4 pb-4 border-b border-gray-200">
+          <View className="flex-1">
+            <Text className="text-base font-semibold font-dm text-gray-900 mb-2">
+              {displayData.scheduled_date || '26 June 2024'} • {displayData.scheduled_time || '4:30PM'}
+            </Text>
+            <View className="flex-row items-center">
+              <Ionicons name="location" size={16} color="#9CA3AF" />
+              <Text className="text-sm text-gray-600 font-dm ml-1">
+                {displayData.distance || '7'} km away
+              </Text>
             </View>
           </View>
-          <View style={styles.priceBox}>
-            <Text style={styles.priceText}>₹10,499</Text>
+          <View className="px-4 py-2 bg-red-50 rounded-full">
+            <Text className="text-lg font-bold font-dm text-red-600">
+              ₹{displayData.total_cost || displayData.price || '10,499'}
+            </Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.calendarButton}>
+        <TouchableOpacity 
+          className="bg-teal-500 flex-row items-center justify-center py-4 rounded-full"
+          onPress={handleAddToCalendar}
+        >
           <Ionicons name="calendar" size={20} color="white" />
-          <Text style={styles.calendarButtonText}>Add to calendar</Text>
+          <Text className="text-white text-base font-bold font-dm ml-2">Add to calendar</Text>
         </TouchableOpacity>
       </View>
 
       {/* Bottom Button */}
-      <TouchableOpacity style={styles.bottomButton} onPress={() => navigation.navigate('Homepage')}>
-        <Text style={styles.bottomButtonText}>Back to Home</Text>
+      <TouchableOpacity 
+        className="bg-red-600 mx-5 py-4 rounded-full absolute bottom-8 left-0 right-0 items-center" 
+        onPress={() => navigation.navigate('Homepage')}
+      >
+        <Text className="text-white text-base font-bold font-dm">Back to Home</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  title: {
-    fontWeight: 500,
-    fontSize: 32,
-    marginBottom: 10,
-    marginLeft:20,
-    fontFamily: 'DM',
-  },
-  notificationContainer: {
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    marginHorizontal: 20,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-  notificationLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  notificationText: {
-    marginLeft: 10,
-  
-  },
-  notificationTitle: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  notificationSubtitle: {
-    fontSize: 14,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  bookingCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 24,
-    padding: 15,
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  serviceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  serviceText: {
-    marginLeft: 10,
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  referenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    gap:80
-  },
-  labelText: {
-    fontSize: 14,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  referenceBox: {
-    paddingHorizontal: 20,
-    paddingVertical: 6,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 70,
-    marginLeft: 10,
-  },
-  referenceText: {
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  shopDetailsLabel: {
-    fontSize: 14,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginBottom: 5,
-  },
-  shopName: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginBottom: 10,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  dateLocation: {
-    flex: 1,
-  },
-  dateText: {
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginBottom: 5,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  distanceText: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 5,
-  },
-  priceBox: {
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 70,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  priceText: {
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  calendarButton: {
-    backgroundColor: '#40A69F',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    borderRadius: 8,
-  },
-  calendarButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 8,
-  },
-  bottomButton: {
-    backgroundColor: '#4E46B4',
-    marginHorizontal: 20,
-    padding: 15,
-    borderRadius: 70,
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  bottomButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-});
 

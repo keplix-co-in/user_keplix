@@ -1,33 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../services/api';
 
 export default function ChangePassword({navigation}) {
   const [password, setPassword] = useState('');
   const [secureEntryNew, setSecureEntryNew] = useState(true);
   const [isValidPassword, setIsValidPassword] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // Check if password is at least 8 characters
   useEffect(() => {
     setIsValidPassword(password.length >= 8);
   }, [password]);
 
-  return (
-    <SafeAreaView style={styles.container}>
+  const handleContinue = async () => {
+    if (!isValidPassword) return;
 
-      <View style={styles.backcontainer}>
+    setVerifying(true);
+    try {
+      // For now, we'll store the current password and pass it to the next screen
+      // In a real app, you'd verify the current password with the backend
+      await AsyncStorage.setItem('temp_current_password', password);
+      navigation.navigate("ChangePassword1", { currentPassword: password });
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  return (
+    <SafeAreaView className="flex-1 p-5 bg-white">
+
+      <View className="flex-row items-center mb-10">
         <TouchableOpacity onPress={()=> navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+          <Ionicons name={"arrow-back-outline"} size={30} color="#000" style={{borderColor: '#E2E2E2', borderWidth: 2, borderRadius: 50, padding: 5}} />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Change Password</Text>
+      <Text className="font-medium text-[28px] mb-10 font-['DM']">Change Password</Text>
 
       <View>
-        <Text style={styles.enter}>Enter your current password</Text>
-        <View style={styles.inputContainer}>
+        <Text className="text-base text-[#0000008F] mb-2.5 font-['DM']">Enter your current password</Text>
+        <View className="flex-row items-center border-2 border-[#ddd] rounded-[70px] mb-[350px]">
           <TextInput
-            style={styles.input}
+            className="flex-1 h-[50px] px-2.5 text-base font-['DM']"
             placeholder="Eg: a62gjf7hi"
             placeholderTextColor="#aaa"
             value={password}
@@ -37,119 +58,31 @@ export default function ChangePassword({navigation}) {
           <TouchableOpacity onPress={() => setSecureEntryNew((prev) => !prev)}>
             <Ionicons
               name={secureEntryNew ? "eye-off" : "eye"}
-              style={styles.iconInsideInput}
+              size={24}
+              color="#0000008F"
+              style={{marginRight: 10}}
             />
           </TouchableOpacity>
         </View>
       </View>
 
       <TouchableOpacity 
-        style={[styles.button, isValidPassword && styles.activeButton]} 
-        onPress={() => {
-          if (isValidPassword) {
-            navigation.navigate("ChangePassword1");
-          }
-        }}
+        className={`rounded-[70px] py-4 items-center mb-5 ${isValidPassword ? 'bg-[#DC2626]' : 'bg-[#0000008F]'}`}
+        onPress={handleContinue}
+        disabled={!isValidPassword || verifying}
       >
-        <Text style={[styles.buttonText, isValidPassword && styles.activeButtonText]}>Continue</Text>
+        {verifying ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-medium font-['DM']">Continue</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-        <Text style={styles.createAccountText}>
+        <Text className="rounded-[70px] text-center text-[#666] text-base border-2 border-[#E2E2E2] p-4 font-['DM']">
             Forgot Password
         </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  backcontainer:{
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 40,
-  },
-  icon: {
-    fontSize: 30, 
-    borderColor:'#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  text: {
-    fontSize: 24, 
-    marginRight: 30,
-    color: "#0000008F",
-    fontFamily: 'DM',
-  },
-  titleContainer: {
-    flex: 1, 
-    alignItems: 'center',
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 28,
-    marginBottom: 40,
-    fontFamily: 'DM',
-  },
-  enter:{
-    fontSize: 16,
-    color: '#0000008F',
-    marginBottom: 10,
-    fontFamily: 'DM',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 350,
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    paddingHorizontal: 10,
-    fontSize: 16, 
-    fontFamily: 'DM',
-  },
-  iconInsideInput: {
-    fontSize: 24,
-    color: '#0000008F',
-    marginRight: 10,
-  },
-  button: {
-    backgroundColor: '#0000008F',
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  activeButton: {
-    backgroundColor: '#4E46B4',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  activeButtonText: {
-    color: '#fff',
-  },
-  createAccountText: {
-    borderRadius: 70,
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 16,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    padding: 15,
-    fontFamily: 'DM',
-  },
-});

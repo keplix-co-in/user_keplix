@@ -4,243 +4,156 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../services/api';
+import { tokenManager } from '../../services/tokenManager';
 
 export default function SignIn({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [secureEntry, setSecureEntry] = useState(true);
   const [isValid, setIsValid] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
-
-  const usersDatabase = [
-    { email: "test1@example.com", password: "password123" },
-    { email: "test2@example.com", password: "mysecurepassword" },
-    { email: "admin@example.com", password: "adminpass" },
-  ];
+  const [loading, setLoading] = useState(false);
 
   const isFormFilled = email.trim() !== "" && password.trim() !== "";
 
-  const handleVerify = () => {
-    const userExists = usersDatabase.some(
-      (user) => user.email === email && user.password === password
-    );
+  const handleVerify = async () => {
+    if (!isFormFilled) return;
 
-    if (userExists) {
-      setIsValid(true);
-      setIsVerified(true);
+    setLoading(true);
+    setIsValid(true);
+
+    try {
+      const response = await authAPI.login({
+        email: email.trim(),
+        password: password,
+      });
+
+      // Store tokens
+      await tokenManager.setTokens(response.data.access, response.data.refresh);
+
+      // Store user data
+      const userData = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        role: response.data.user.role,
+        name: response.data.user.name || '',
+        phone: response.data.user.phone || '',
+        address: response.data.user.address || '',
+        is_active: response.data.user.is_active,
+      };
+      await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+
+      // Navigate to homepage
       navigation.navigate("Homepage");
-    } else {
+    } catch (error) {
+      console.error('Login error:', error);
       setIsValid(false);
-      setIsVerified(false);
+      
+      if (error.response?.data?.error) {
+        Alert.alert('Login Failed', error.response.data.error);
+      } else if (error.message === 'Network Error') {
+        Alert.alert('Network Error', 'Please check your internet connection and ensure the backend server is running.');
+      } else {
+        Alert.alert('Login Failed', 'Invalid email or password. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.backcontainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 p-5 bg-white">
+      <View className="flex-row items-center mb-10">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Sign In</Text>
-      <Text style={styles.subtitle}>Log in using your credentials</Text>
+      <Text className="font-medium text-[32px] mb-2.5 text-black font-['DM']">Sign In</Text>
 
-      <View>
-        <Text style={[styles.enter, { marginTop: 40 }]}>
+      <View className="mt-8">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">
           Enter your email address
         </Text>
         <TextInput
-          style={[styles.input, !isValid && { borderColor: "red" }]}
+          className={`h-[56px] border-2 rounded-2xl px-4 text-base text-black font-['DM'] ${!isValid ? 'border-red-600' : 'border-[#E8E8E8]'}`}
           placeholder="Eg: xyz@gmail.com"
-          placeholderTextColor="#aaa"
+          placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          autoCapitalize="none"
         />
-        {!isValid && !email && (
-          <Text style={styles.errorText}>Invalid email</Text>
-        )}
       </View>
 
-      <Text style={[styles.enter, { marginTop: 10 }]}>Enter password</Text>
-      <View style={[styles.inputContainer, !isValid && { borderColor: "red" }]}>
-        <TextInput
-          style={styles.input1}
-          placeholder="Eg: a62gjf7hi"
-          placeholderTextColor="#aaa"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={secureEntry}
-        />
-        <TouchableOpacity onPress={() => setSecureEntry((prev) => !prev)}>
-          <Ionicons
-            name={secureEntry ? "eye-off" : "eye"}
-            style={styles.iconInsideInput}
+      <View className="mt-5">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter password</Text>
+        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${!isValid ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
+          <TextInput
+            className="flex-1 text-base text-black font-['DM']"
+            placeholder="••••••••"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={secureEntry}
           />
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSecureEntry((prev) => !prev)}>
+            <Ionicons
+              name={secureEntry ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#999"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-      {!isValid && !password && (
-        <Text style={styles.errorText}>Invalid password</Text>
-      )}
 
       <TouchableOpacity
-        style={styles.forgotPassword}
+        className="self-end mt-3"
         onPress={() => navigation.navigate("ForgotPassword")}
       >
-        <Text style={[styles.forgotPasswordText, { marginTop: 10 }]}>
+        <Text className="text-red-600 text-sm font-['DM']">
           Forgot password?
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[
-          styles.button,
-          isFormFilled && { backgroundColor: "red" },
-          isVerified && { backgroundColor: "#28A745" },
-        ]}
+        className={`rounded-full py-4 items-center mt-auto mb-5 ${isFormFilled && !loading ? 'bg-red-600' : 'bg-[#CCCCCC]'}`}
         onPress={() => {
-          if (isFormFilled) {
+          if (isFormFilled && !loading) {
             handleVerify();
           }
         }}
         activeOpacity={isFormFilled ? 0.7 : 1}
+        disabled={loading}
       >
-        <Text style={styles.buttonText}>Verify</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-medium font-['DM']">Verify</Text>
+        )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-        <Text style={styles.createAccountText}>
-          Don’t have an account? <Text style={styles.link}>Create one</Text>
+      <View className="flex-row items-center justify-center mb-5">
+        <Text className="text-[#666] text-sm font-['DM']">
+          Don't have account? 
         </Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+          <Text className="text-red-600 text-sm font-medium font-['DM'] ml-1">
+            Create one
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "white",
-  },
-  backcontainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  icon: {
-    fontSize: 30,
-    color: "black",
-    borderColor: "black",
-    borderWidth: 2,
-    borderRadius: 50,
-  },
-  text: {
-    fontSize: 24,
-    marginRight: 30,
-    color: "#0000008F",
-    fontFamily: "DM",
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  title: {
-    fontWeight: "500",
-    fontSize: 32,
-    marginBottom: 10,
-    color: "black",
-    fontFamily: "DM",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "black",
-    marginBottom: 20,
-    fontFamily: "DM",
-  },
-  enter: {
-    fontSize: 16,
-    color: "black",
-    marginBottom: 10,
-    fontFamily: "DM",
-  },
-  input: {
-    height: 50,
-    borderColor: "#ddd",
-    color: "black",
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 5,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    fontFamily: "DM",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderColor: "#ddd",
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 5,
-    paddingHorizontal: 10,
-  },
-  input1: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: "black",
-    fontFamily: "DM",
-  },
-  iconInsideInput: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    marginBottom: 210,
-  },
-  forgotPasswordText: {
-    color: "red",
-    textDecorationLine: "underline",
-    fontFamily: "DM",
-  },
-  button: {
-    backgroundColor: "#0000008F",
-    backgroundColor: "#666",
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: "b",
-    fontSize: 16,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  createAccountText: {
-    borderRadius: 70,
-    textAlign: "center",
-    color: "#666",
-    fontSize: 14,
-    borderColor: "#ddd",
-    borderWidth: 2,
-    padding: 15,
-    fontFamily: "DM",
-  },
-  link: {
-    color: "red",
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 12,
-    marginBottom: 10,
-  },
-});
+

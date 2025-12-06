@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   ScrollView,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Fontisto from "react-native-vector-icons/Fontisto";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const savedCards = {
   "1234567890123456": {
@@ -19,16 +20,27 @@ const savedCards = {
   },
 };
 
-export default function Payment2({ navigation }) {
+export default function Payment2({ navigation, route }) {
   const [isSaved, setIsSaved] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const [errorField, setErrorField] = useState(null);
+  const [amount, setAmount] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: "",
     cvv: "",
     validThru: "",
     name: "",
   });
+
+  useEffect(() => {
+    // Get payment info from route params
+    const { amount: paymentAmount, bookingId: booking, service } = route?.params || {};
+    setAmount(paymentAmount || 0);
+    setBookingId(booking);
+    setServiceData(service);
+  }, [route?.params]);
 
   const handleCardNumberChange = (text) => {
     const formattedText = text.replace(/[^0-9]/g, "");
@@ -54,56 +66,75 @@ export default function Payment2({ navigation }) {
     cardDetails.validThru.length === 7 &&
     cardDetails.name.trim() !== "";
 
+  const handleSendOtp = async () => {
+    if (isSaved) {
+      try {
+        // Save card details to AsyncStorage
+        const savedMethods = await AsyncStorage.getItem('payment_methods');
+        const methods = savedMethods ? JSON.parse(savedMethods) : { cards: [] };
+        
+        const newCard = {
+          cardNumber: `xxxx xxxx xxxx ${cardDetails.cardNumber.slice(-4)}`,
+          bankName: 'Bank',
+          expiryDate: cardDetails.validThru.replace(/(\d{2})(\d{4})/, '$1 / $2'),
+        };
+        
+        methods.cards.push(newCard);
+        await AsyncStorage.setItem('payment_methods', JSON.stringify(methods));
+      } catch (error) {
+        console.error('Error saving card:', error);
+      }
+    }
+    
+    // Navigate to OTP screen
+    navigation.navigate("Payment3", { amount, bookingId, service: serviceData, cardDetails });
+  };
+
   const CheckboxComponent = () => (
     <TouchableOpacity
-      style={styles.checkboxContainer}
+      className="flex-row items-center mt-4"
       onPress={() => setIsSaved(!isSaved)}
     >
-      <View style={[styles.checkbox, isSaved && styles.checkboxChecked]}>
-        {isSaved && <Text style={styles.checkmark}>✓</Text>}
+      <View className={`w-6 h-6 border-2 rounded-lg items-center justify-center mr-3 ${isSaved ? 'bg-red-600 border-red-600' : 'border-[#E8E8E8]'}`}>
+        {isSaved && <Ionicons name="checkmark" size={16} color="#FFF" />}
       </View>
-      <Text style={styles.checkboxText}>Save details for future</Text>
+      <Text className="text-sm text-gray-600 font-dm">Save details for future</Text>
     </TouchableOpacity>
   );
 
   return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView className="flex-1 bg-white" edges={['top']}>
         <ScrollView keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+          <View className="flex-row items-center px-5 pt-5 pb-4">
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+            >
+              <Ionicons name="arrow-back-outline" size={24} color="#000" />
             </TouchableOpacity>
+            <View className="flex-1 items-center pr-10">
+              <Text className="text-2xl font-semibold text-gray-900 font-dm">Payment</Text>
+            </View>
           </View>
 
-          <Text style={styles.title}>Payment</Text>
-          <Text style={styles.subtitle}>Select payment method</Text>
+          <Text className="text-base text-gray-500 mb-6 font-dm px-5">Card details</Text>
 
-          <View style={styles.cardContainer}>
-            <View style={styles.inputGroup}>
-              <View style={styles.menuItem}>
-                <Fontisto
-                  name="credit-card"
-                  size={20}
-                  color="#000"
-                  style={styles.menuIcon}
-                />
-                <Text style={styles.menuText}>Debit / Credit Card</Text>
+          <View className="mx-4 border border-[#E8E8E8] rounded-2xl mb-5 p-5 bg-white">
+            <View className="mb-6">
+              <View className="flex-row items-center mb-6">
+                <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+                  <Fontisto name="credit-card" size={20} color="#DC2626" />
+                </View>
+                <Text className="text-lg font-semibold text-gray-900 font-dm">Debit / Credit Card</Text>
               </View>
 
               <Text
-                style={[
-                  styles.label,
-                  focusedField === "cardNumber" && styles.focusedLabel,
-                ]}
+                className={`text-sm mb-2 font-medium font-dm ${focusedField === "cardNumber" ? 'text-red-600' : 'text-gray-700'}`}
               >
                 Card Number
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "cardNumber" && styles.focusedInput,
-                  errorField === "cardNumber" && styles.errorInput,
-                ]}
+                className={`border-2 rounded-2xl px-4 py-3 text-base font-dm ${focusedField === "cardNumber" ? 'border-red-600' : errorField === "cardNumber" ? 'border-red-500' : 'border-[#E8E8E8]'}`}
                 placeholder="xxxx-xxxx-xxxx-xxxx"
                 keyboardType="numeric"
                 value={cardDetails.cardNumber}
@@ -113,26 +144,20 @@ export default function Payment2({ navigation }) {
                 onBlur={() => setFocusedField(null)}
               />
               {errorField === "cardNumber" && (
-                <Text style={styles.errorText}>Invalid Card Number</Text>
+                <Text className="text-red-500 text-xs mt-1">Invalid Card Number</Text>
               )}
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
+            <View className="flex-row justify-between">
+              <View className="mb-5 w-[48%]">
                 <Text
-                  style={[
-                    styles.label,
-                    focusedField === "cvv" && styles.focusedLabel,
-                  ]}
+                  className={`text-sm mb-2 font-medium font-dm ${focusedField === "cvv" ? 'text-red-600' : 'text-gray-700'}`}
                 >
                   CVV/CVC No.
                 </Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    focusedField === "cvv" && styles.focusedInput,
-                  ]}
-                  placeholder="OOO"
+                  className={`border-2 rounded-2xl px-4 py-3 text-base font-dm ${focusedField === "cvv" ? 'border-red-600' : 'border-[#E8E8E8]'}`}
+                  placeholder="000"
                   maxLength={3}
                   keyboardType="numeric"
                   value={cardDetails.cvv}
@@ -141,20 +166,14 @@ export default function Payment2({ navigation }) {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
+              <View className="mb-5 w-[48%]">
                 <Text
-                  style={[
-                    styles.label,
-                    focusedField === "validThru" && styles.focusedLabel,
-                  ]}
+                  className={`text-sm mb-2 font-medium font-dm ${focusedField === "validThru" ? 'text-red-600' : 'text-gray-700'}`}
                 >
                   Valid Thru
                 </Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    focusedField === "validThru" && styles.focusedInput,
-                  ]}
+                  className={`border-2 rounded-2xl px-4 py-3 text-base font-dm ${focusedField === "validThru" ? 'border-red-600' : 'border-[#E8E8E8]'}`}
                   placeholder="mm/yyyy"
                   maxLength={7}
                   keyboardType="numeric"
@@ -166,20 +185,14 @@ export default function Payment2({ navigation }) {
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
+            <View className="mb-6">
               <Text
-                style={[
-                  styles.label,
-                  focusedField === "name" && styles.focusedLabel,
-                ]}
+                className={`text-sm mb-2 font-medium font-dm ${focusedField === "name" ? 'text-red-600' : 'text-gray-700'}`}
               >
                 Full Name
               </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "name" && styles.focusedInput,
-                ]}
+                className={`border-2 rounded-2xl px-4 py-3 text-base font-dm ${focusedField === "name" ? 'border-red-600' : 'border-[#E8E8E8]'}`}
                 placeholder="Name"
                 value={cardDetails.name}
                 onChangeText={(text) =>
@@ -191,15 +204,13 @@ export default function Payment2({ navigation }) {
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.sendOtpButton,
-                isOtpEnabled && styles.sendOtpButtonEnabled,
-              ]}
-              disabled={!isOtpEnabled} 
+              className={`py-4 rounded-full items-center ${isOtpEnabled ? 'bg-red-600' : 'bg-gray-300'}`}
+              disabled={!isOtpEnabled}
+              onPress={handleSendOtp}
             >
-              <Text style={styles.buttonText} 
-              onPress={() => navigation.navigate("Payment3")}>
-                Send OTP</Text>
+              <Text className="text-white text-base font-semibold font-dm">
+                Send OTP
+              </Text>
             </TouchableOpacity>
 
             <CheckboxComponent />
@@ -208,148 +219,3 @@ export default function Payment2({ navigation }) {
       </SafeAreaView>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'DM',
-    fontWeight: '500',
-    marginLeft: 23,
-  },
-  cardContainer: { 
-    paddingVertical: 15, 
-    paddingHorizontal: 15,
-    width:"92%",
-    marginLeft:15, 
-    borderColor: "#E2E2E2", 
-    borderWidth: 2, 
-    borderRadius: 16, 
-    marginBottom: 20, 
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  menuItem: {
-    flexDirection: "row", 
-    alignItems: "center", 
-    paddingVertical: 5,
-    marginBottom: 20,
-    backgroundColor: "#fff",
-  },
-  menuIcon: {
-    marginRight: 10, 
-  },
-  menuText: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#1E1E1E",
-    fontFamily: "DM",
-  },
-  label: {
-    fontSize: 14,
-    color: "#000000",
-    marginBottom: 5,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E2E2E2",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    fontWeight: "400",
-    fontFamily: "DM",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  halfWidth: {
-    width: "48%",
-  },
-  sendOtpButton: {
-    backgroundColor: "#0000008F",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 4,
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  checkboxText: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'DM',
-  },
-  errorInput: {
-    borderColor: "red",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 12,
-    marginTop: 5,
-  },
-  focusedInput: {
-    borderColor: "#4E46B4",
-  },
-  focusedLabel: {
-    color: "#4E46B4",
-  },
-  sendOtpButtonEnabled: {
-    backgroundColor: "#40A69F",
-  },
-});

@@ -1,94 +1,87 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function FAQScreen({ navigation }) {
+  const [expandedIndex, setExpandedIndex] = useState(null);
+
   const faqs = [
-    'Lorem ipsum dolor sit amet',
-    'Consectetur adipiscing elit',
-    'Lorem ipsum dolor',
-    'Lorem ipsum dolor sit amet',
-    'Consectetur adipiscing elit',
-    'Lorem ipsum dolor',
-    'Lorem ipsum dolor sit amet',
+    {
+      question: 'How do I book a service?',
+      answer: 'You can book a service by browsing our service catalog, selecting your preferred service, choosing a date and time slot, and proceeding with the booking. Payment can be made securely through our app.',
+    },
+    {
+      question: 'What payment methods are accepted?',
+      answer: 'We accept various payment methods including credit/debit cards, UPI, net banking, and digital wallets. All transactions are secure and encrypted.',
+    },
+    {
+      question: 'Can I cancel or reschedule my booking?',
+      answer: 'Yes, you can cancel or reschedule your booking from the Bookings section. Please note that cancellation policies may apply depending on the timing.',
+    },
+    {
+      question: 'How do I track my service request?',
+      answer: 'You can track your service request in real-time from the Bookings section. You will receive notifications for each stage of the service.',
+    },
+    {
+      question: 'What if I\'m not satisfied with the service?',
+      answer: 'Your satisfaction is our priority. If you\'re not satisfied, please contact our customer support immediately or submit feedback through the app. We will work to resolve your concerns.',
+    },
+    {
+      question: 'How do I update my profile information?',
+      answer: 'Go to Profile > Edit Profile to update your personal information, contact details, and preferences.',
+    },
+    {
+      question: 'Is my payment information secure?',
+      answer: 'Yes, all payment information is encrypted and processed through secure payment gateways. We do not store your complete card details.',
+    },
   ];
 
+  const toggleFAQ = (index) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <SafeAreaView className="flex-1 bg-white px-6" edges={['top']}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        <View className="mt-5 mb-5">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="mt-2.5 w-10 h-10 rounded-[20px] border-2 border-[#E2E2E2] justify-center items-center">
             <Ionicons name="arrow-back-outline" size={30} color="#000" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>FAQ's</Text>
+        <Text className="text-2xl font-medium mb-5 font-['DM'] text-[#0000008F]">FAQ's</Text>
+        <Text className="text-sm text-[#666] mb-5 font-['DM']">Find answers to commonly asked questions</Text>
 
         {faqs.map((item, index) => (
-          <View key={index}>
-            <TouchableOpacity style={styles.faqRow}>
-              <Text style={styles.faqText}>{item}</Text>
-              <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+          <View key={index} className="mb-2">
+            <TouchableOpacity 
+              className="flex-row justify-between items-center py-4 px-4 bg-[#F8F8F8] rounded-xl"
+              onPress={() => toggleFAQ(index)}
+            >
+              <Text className="text-base font-medium font-['DM'] text-black flex-1 pr-2">
+                {item.question}
+              </Text>
+              <Ionicons 
+                name={expandedIndex === index ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#DC2626" 
+              />
             </TouchableOpacity>
-            <View style={styles.separator} />
+            
+            {expandedIndex === index && (
+              <View className="px-4 py-3 bg-white border-l-2 border-[#DC2626] mt-1">
+                <Text className="text-sm text-[#666] font-['DM']">{item.answer}</Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-  },
-  scrollContainer: {
-    paddingBottom: 20,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  backButton: {
-    marginTop:10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '500',
-    marginBottom: 20,
-    fontFamily: 'DM',
-    color: '#0000008F',
-  },
-  faqRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  faqText: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    color: '#000',
-  },
-  separator: {
-    height: 2,
-    backgroundColor: '#E2E2E2',
-  },
-});

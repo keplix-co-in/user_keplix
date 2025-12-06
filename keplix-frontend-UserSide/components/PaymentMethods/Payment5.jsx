@@ -1,21 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 
-export default function Payment5({ navigation }) {
+export default function Payment5({ navigation, route }) {
   const [focusedField, setFocusedField] = useState(null);
   const [errorField, setErrorField] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
+  const [amount, setAmount] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: "",
     cvv: "",
@@ -26,6 +28,14 @@ export default function Payment5({ navigation }) {
   const [bankListVisible, setBankListVisible] = useState(true); // Control visibility of bank list
 
   const banks = ["HDFC Bank", "IDBI Bank", "SBI Bank", "CANARA Bank"];
+
+  useEffect(() => {
+    // Get payment info from route params
+    const { amount: paymentAmount, bookingId: booking, service } = route?.params || {};
+    setAmount(paymentAmount || 0);
+    setBookingId(booking);
+    setServiceData(service);
+  }, [route?.params]);
 
   const handleCardNumberChange = (text) => {
     const formattedText = text.replace(/[^0-9]/g, "");
@@ -40,258 +50,80 @@ export default function Payment5({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+        <View className="flex-row items-center justify-between px-5 mb-5">
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+          >
+            <Ionicons name="arrow-back-outline" size={24} color="#000" />
           </TouchableOpacity>
+          <Text className="text-2xl font-bold text-gray-900 font-dm">Payment</Text>
+          <View className="w-10" />
         </View>
 
-        <Text style={styles.title}>Payment</Text>
-        <Text style={styles.subtitle}>Select payment method</Text>
+        <Text className="text-sm text-gray-500 mb-6 font-dm px-5">Select your bank for net banking</Text>
 
-        <View style={styles.cardContainer}>
-          <View style={styles.inputGroup}>
-            <View style={styles.menuItem}>
-              <FontAwesome name="bank" size={25} color="#000" style={styles.menuIcon} />
-              <Text style={styles.menuText}>Net Banking</Text>
+        <View className="mx-5 border border-[#E8E8E8] rounded-2xl mb-5 p-5 bg-white">
+          <View className="mb-5">
+            <View className="flex-row items-center mb-4">
+              <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+                <FontAwesome name="bank" size={24} color="#DC2626" />
+              </View>
+              <Text className="text-lg font-bold text-gray-900 font-dm">Net Banking</Text>
             </View>
 
-            <Text
-              style={[
-                styles.label,
-                focusedField === "cardNumber" && styles.focusedLabel,
-              ]}
-            >
-              Select Bank from the List
+            <Text className="text-sm text-gray-700 font-semibold font-dm mb-2">
+              Select your bank
             </Text>
-            <TextInput
-              style={[
-                styles.input,
-                focusedField === "cardNumber" && styles.focusedInput,
-                errorField === "cardNumber" && styles.errorInput,
-              ]}
-              placeholder="Select Bank"
-              keyboardType="numeric"
-              value={cardDetails.name}
-              onChangeText={handleCardNumberChange}
-              maxLength={16}
-              onFocus={() => setFocusedField("cardNumber")}
-              onBlur={() => setFocusedField(null)}
-            />
-            {errorField === "cardNumber" && (
-              <Text style={styles.errorText}>Invalid Card Number</Text>
-            )}
+            <View className="px-4 py-3 bg-gray-50 border border-[#E8E8E8] rounded-xl">
+              <Text className="text-sm text-gray-600 font-dm">
+                {cardDetails.name || 'Choose from the list below'}
+              </Text>
+            </View>
           </View>
 
           {bankListVisible && (
-            <View style={styles.bankContainer}>
+            <View className="mb-4">
               {banks.map((bank, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={[
-                    styles.bankItem,
-                    selectedBank === index && styles.bankItemSelected,
-                  ]}
+                  className={`flex-row items-center justify-between py-4 px-4 rounded-xl mb-2 ${selectedBank === index ? 'bg-red-600' : 'bg-gray-50 border border-[#E8E8E8]'}`}
                   onPress={() => handleBankSelect(bank, index)}
                 >
                   <Text
-                    style={[
-                      styles.bankText,
-                      selectedBank === index && styles.bankTextSelected,
-                    ]}
+                    className={`text-base font-semibold font-dm ${selectedBank === index ? 'text-white' : 'text-gray-900'}`}
                   >
                     {bank}
                   </Text>
+                  {selectedBank === index && (
+                    <Ionicons name="checkmark-circle" size={24} color="white" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
           )}
-
-          <TouchableOpacity
-            style={[
-          styles.addButton,
-          selectedBank !== null && styles.proceedSelected,
-        ]}
-        onPress={() => navigation.navigate("PaymentSuccess")}
-          >
-            <Text style={styles.buttonText}>Proceed</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
       <TouchableOpacity
-        style={[
-          styles.addButton,
-          selectedBank !== null && styles.addButtonSelected,
-        ]}
-         onPress={() => navigation.navigate("PaymentSuccess")}
+        className={`rounded-full py-4 mx-5 items-center mb-5 ${selectedBank !== null ? 'bg-red-600' : 'bg-gray-300'}`}
+        onPress={() => {
+          if (selectedBank !== null) {
+            navigation.navigate("PaymentSuccess", {
+              amount,
+              bookingId,
+              service: serviceData,
+              paymentMethod: 'netbanking',
+              transactionId: `NB${Date.now()}`,
+            });
+          }
+        }}
+        disabled={selectedBank === null}
       >
-        <Text style={styles.addButtonText}>Pay ₹10,499</Text>
+        <Text className="text-white text-base font-bold font-dm">Pay ₹{amount.toLocaleString()}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'DM',
-    fontWeight: '500',
-    marginLeft: 23,
-  },
-  cardContainer: {
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    width: "92%",
-    marginLeft: 15,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 16,
-    marginBottom: 20,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 5,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuText: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#1E1E1E",
-    fontFamily: "DM",
-  },
-  label: {
-    fontSize: 14,
-    color: "#000000",
-    marginBottom: 5,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: "#E2E2E2",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    fontWeight: "400",
-    fontFamily: "DM",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  sendOtpButton: {
-    backgroundColor: "#0000008F",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "DM",
-  },
-  addButton: {
-    backgroundColor: '#0000008F',
-    borderRadius: 70,
-    paddingVertical: 15,
-    marginHorizontal: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-    width: "90%",
-  },
-  addButtonSelected: {
-    backgroundColor: "rgba(78, 70, 180, 1)", 
-  },
-  errorInput: {
-    borderColor: "red",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 12,
-    marginTop: 5,
-  },
-  focusedInput: {
-    borderColor: "#4E46B4",
-  },
-  focusedLabel: {
-    color: "#4E46B4",
-  },
-  proceedSelected: {
-    backgroundColor: "#40A69F",
-  },
-  bankContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#E2E2E2",
-    marginBottom: 10,
-    width: "100%",
-  },
-  bankItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    backgroundColor: "#F9F9F9",
-    marginBottom: 10,
-  },
-  bankItemSelected: {
-    backgroundColor: "rgba(78, 70, 180, 1)",
-  },
-  bankText: {
-    fontSize: 16,
-    color: "#1E1E1E",
-    fontWeight: "500",
-  },
-  bankTextSelected: {
-    color: "#fff",
-  },
-});

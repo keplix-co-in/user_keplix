@@ -1,18 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { feedbackAPI, reviewsAPI } from '../../services/api';
 
-export default function FeedbackScreen({ navigation }) {
+export default function FeedbackScreen({ navigation, route }) {
+  const { booking } = route.params || {};
   const [rating, setRating] = useState(5); // All stars full on load
+  const [feedbackText, setFeedbackText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
+
   const improvementTags = [
     'Overall Service',
     'Customer Support',
@@ -22,187 +30,172 @@ export default function FeedbackScreen({ navigation }) {
   ];
   const [selectedTags, setSelectedTags] = useState([]); // No tags selected initially
 
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userDataString = await AsyncStorage.getItem('user_data');
+      if (userDataString) {
+        setUserData(JSON.parse(userDataString));
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
+  const handleSubmit = async () => {
+    if (!userData?.id) {
+      Alert.alert('Authentication Required', 'Please login to submit feedback.');
+      navigation.navigate('SignIn');
+      return;
+    }
+
+    if (!feedbackText.trim() && selectedTags.length === 0) {
+      Alert.alert('Incomplete Feedback', 'Please provide feedback text or select improvement areas.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const feedbackData = {
+        user_id: userData.id,
+        rating: rating,
+        comment: feedbackText.trim(),
+        improvement_areas: selectedTags.join(', '),
+        feedback_type: 'general',
+      };
+
+      await feedbackAPI.createFeedback(feedbackData);
+
+      Alert.alert(
+        'Success',
+        'Thank you for your feedback! We appreciate your input.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setRating(5);
+              setFeedbackText('');
+              setSelectedTags([]);
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Submit feedback error:', error);
+
+      if (error.response?.data?.error) {
+        Alert.alert('Error', error.response.data.error);
+      } else if (error.message === 'Network Error') {
+        Alert.alert('Network Error', 'Please check your internet connection and ensure the backend server is running.');
+      } else {
+        Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <SafeAreaView className="flex-1 bg-white px-6" edges={['top']}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        {/* Header */}
+        <View className="flex-row items-center justify-between mt-5 mb-6">
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+          >
             <Ionicons name="arrow-back-outline" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text className="text-2xl font-bold text-gray-900 font-dm">Feedback</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text className="text-base text-gray-600 font-dm">Skip →</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Feedback & Suggestion</Text>
-        <Text style={styles.description}>Provide feedback to tell us how we can improve....</Text>
+        {/* Service Info Card */}
+        {booking && (
+          <View className="bg-white border border-[#E8E8E8] rounded-2xl p-4 mb-6">
+            <View className="flex-row items-start">
+              <View className="mr-3">
+                <View className="w-16 h-16 bg-gray-200 rounded-xl overflow-hidden">
+                  {/* Service Image Placeholder */}
+                  <View className="w-full h-full bg-red-600 items-center justify-center">
+                    <MaterialCommunityIcons name="car-wrench" size={32} color="white" />
+                  </View>
+                </View>
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-gray-900 font-dm mb-1">
+                  {booking.service?.vendor_name || 'Dwarka mor service'}
+                </Text>
+                <Text className="text-sm text-gray-500 font-dm mb-1">
+                  {booking.service?.location || 'B1-41, Chandan park,'}
+                </Text>
+                <Text className="text-sm text-gray-500 font-dm mb-2">
+                  {booking.service?.area || 'Dwarka mor'} - {booking.service?.pincode || '110059'}
+                </Text>
+                <Text className="text-sm text-gray-700 font-dm">
+                  <Text className="font-semibold">Service:</Text> {booking.service?.name || 'Engine Repair'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
-        <Text style={styles.sectionTitle}>Rate Your Experience:</Text>
-        <Text style={styles.subtitle}>Are you satisfied with service?</Text>
-        <View style={styles.starsContainer}>
+        {/* Rating Section */}
+        <Text className="text-base font-bold text-gray-900 mb-2 font-dm">Rating:</Text>
+        <View className="flex-row mb-6">
           {[1, 2, 3, 4, 5].map((i) => (
-            <TouchableOpacity key={i} onPress={() => setRating(i)}>
-              <MaterialCommunityIcons
+            <TouchableOpacity key={i} onPress={() => setRating(i)} className="mr-2">
+              <Ionicons
                 name={i <= rating ? 'star' : 'star-outline'}
-                size={36}
-                color="#4E46B4"
+                size={40}
+                color={i <= rating ? '#DC2626' : '#DC2626'}
               />
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.divider} />
+        <Text className="text-sm text-gray-600 font-dm mb-6">How satisfied was our service?</Text>
 
-        <Text style={styles.sectionTitle}>Tell us what can be improved?</Text>
-        <View style={styles.tagsContainer}>
-          {improvementTags.map((tag) => (
-            <TouchableOpacity
-              key={tag}
-              style={[styles.tag, selectedTags.includes(tag) && styles.tagSelected]}
-              onPress={() => toggleTag(tag)}
-            >
-              <Text
-                style={selectedTags.includes(tag) ? styles.tagTextSelected : styles.tagText}
-              >
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionTitle}>Tell us on how can we improve?</Text>
+        {/* Feedback Input */}
         <TextInput
-          style={styles.input}
+          className="border border-[#E8E8E8] rounded-2xl px-4 py-4 text-base bg-gray-50 font-dm min-h-[120px]"
           placeholder="Type here...."
-          placeholderTextColor="#A9A9A9"
+          placeholderTextColor="#9CA3AF"
           multiline
+          numberOfLines={5}
+          textAlignVertical="top"
+          value={feedbackText}
+          onChangeText={setFeedbackText}
         />
       </ScrollView>
 
-      <TouchableOpacity style={styles.submitButton}>
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
+      <View className="px-6 pb-6">
+        <TouchableOpacity 
+          className={`rounded-full py-4 items-center ${loading ? 'bg-gray-400' : 'bg-red-600'}`}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-base font-bold font-dm">Publish review</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-  },
-  scrollContainer: {
-    paddingBottom: 20,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  backButton: {
-    marginTop:10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 10,
-    fontFamily: 'DM',
-    color: '#0000008F',
-  },
-  description: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 20,
-    fontFamily: 'DM',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#0000008F',
-    marginBottom: 10,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E2E2',
-    marginVertical: 20,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  tag: {
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    marginRight: 8,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-  },
-  tagSelected: {
-    backgroundColor: '#4E46B4',
-    borderColor: '#4E46B4',
-  },
-  tagText: {
-    color: '#000',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tagTextSelected: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 14,
-    marginBottom: 20,
-    backgroundColor: '#fafafa',
-  },
-  submitButton: {
-    backgroundColor: '#4E46B4',
-    borderRadius: 70,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginHorizontal: 24,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'DM',
-  },
-});

@@ -1,22 +1,23 @@
-import React, { useState,useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   FlatList,
   Image,
-  StyleSheet,
   TextInput,
-  SafeAreaView,
   Modal,
-  Pressable,
   PanResponder,
-  Animated
+  Animated,
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Foundation from "react-native-vector-icons/Foundation";
 import Entypo from 'react-native-vector-icons/Entypo';
+import { servicesAPI } from '../../services/api';
 
 const CustomSlider = ({ min, max, value, step, onChange }) => {
   const [sliderWidth, setSliderWidth] = useState(0);
@@ -61,149 +62,252 @@ const CustomSlider = ({ min, max, value, step, onChange }) => {
 
   const ProviderList = () => {
   const route = useRoute();
-  const { service } = route.params;
+  const { service } = route.params || {};
   };
 
   return (
     <View
-      style={styles.sliderContainer}
+      className="h-10 justify-center relative"
       onLayout={(event) => setSliderWidth(event.nativeEvent.layout.width)}
     >
-      <View style={styles.sliderTrack} />
+      <View className="h-1 bg-[#E2E2E2] rounded-sm" />
       <Animated.View
-        style={[
-          styles.sliderFill,
-          { width: position },
-        ]}
+        className="h-1 bg-[#DC2626] rounded-sm absolute"
+        style={{ width: position }}
       />
       <Animated.View
         {...panResponder.panHandlers}
-        style={[
-          styles.sliderThumb,
-          {
-            transform: [{ translateX: position }],
-          },
-        ]}
+        className="w-5 h-5 bg-[#DC2626] rounded-full absolute top-2.5 -ml-2.5 shadow-md"
+        style={{
+          transform: [{ translateX: position }],
+        }}
       />
     </View>
   );
 };
 
 
-export default function ProviderList({ navigation }) {
+export default function ProviderList({ navigation, route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [distance, setDistance] = useState(10);
   const [price, setPrice] = useState(25000);
   const [rating, setRating] = useState(4);
   const [activeFilters, setActiveFilters] = useState([]);
+  const [services, setServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get service type from navigation params
+  const serviceType = route?.params?.service || '';
 
-  const providers = [
-    {
-      id: '1',
-      name: 'Dwarka mor service',
-      rating: 4.0,
-      price: '₹9,499',
-      distance: '7 km',
-      image: require('../../assets/images/p1.png'),
-    },
-    {
-      id: '2',
-      name: 'Shreeji Automotives',
-      rating: 3.0,
-      price: '₹8,499',
-      distance: '14 km',
-      image: require('../../assets/images/p2.png'),
-    },
-    {
-      id: '3',
-      name: 'Fix My Cars',
-      rating: 4.0,
-      price: '₹9,799',
-      distance: '12 km',
-      image: require('../../assets/images/p3.png'),
-    },
-  ];
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
+    applyAllFilters();
+  }, [services, distance, price, rating, searchQuery]);
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const response = await servicesAPI.getAllServices();
+      
+      // Filter by service type if provided
+      let filtered = response.data;
+      if (serviceType) {
+        filtered = filtered.filter(service => 
+          service.name?.toLowerCase().includes(serviceType.toLowerCase()) ||
+          service.category?.toLowerCase().includes(serviceType.toLowerCase())
+        );
+      }
+      
+      setServices(filtered);
+      setFilteredServices(filtered);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      setServices([]);
+      setFilteredServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchServices();
+    setRefreshing(false);
+  };
+
+  const applyAllFilters = () => {
+    let filtered = [...services];
+    
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(service =>
+        service.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Apply price filter
+    filtered = filtered.filter(service => 
+      parseFloat(service.price || 0) <= price
+    );
+    
+    // Apply rating filter (if rating data is available)
+    // Note: Backend doesn't have rating yet, so this is placeholder
+    // filtered = filtered.filter(service => 
+    //   (service.rating || 0) >= rating
+    // );
+    
+    setFilteredServices(filtered);
+  };
 
   const applyFilters = () => {
     const newFilters = [];
     
-    newFilters.push(`${distance}km`);
-    newFilters.push(`Below ₹${(price/1000).toFixed(0)}k`);
-    newFilters.push(`${rating}.0+ rating`);
+    if (distance < 20) newFilters.push(`${distance}km`);
+    if (price < 50000) newFilters.push(`Below ₹${(price/1000).toFixed(0)}k`);
+    if (rating > 1) newFilters.push(`${rating}.0+ rating`);
     
     setActiveFilters(newFilters);
     setModalVisible(false);
+    applyAllFilters();
   };
 
   const removeFilter = (index) => {
     const newFilters = activeFilters.filter((_, i) => i !== index);
     setActiveFilters(newFilters);
+    
+    // Reset filter values
+    if (index === 0) setDistance(20);
+    if (index === 1) setPrice(50000);
+    if (index === 2) setRating(1);
   };
 
   const renderProvider = ({ item }) => (
-    <TouchableOpacity style={styles.providerCard} onPress={()=> navigation.navigate("EngineRepairDetail")}>
-      <Image source={item.image} style={styles.providerImage} />
-      <View style={styles.providerDetails}>
-        <Text style={styles.providerName}>{item.name}</Text>
-        <View style={styles.ratingRow}>
-          <Text style={styles.providerRating}>
-            {item.rating}{' '}
-            <MaterialIcons name="star" size={16} color="#4E46B4" />
+    <TouchableOpacity 
+      className="flex-row bg-white border border-[#E8E8E8] rounded-2xl p-4 mx-5 mb-3" 
+      onPress={() => navigation.navigate("ProviderDetails", { service: item })}
+    >
+      <Image 
+        source={item.image ? { uri: item.image } : require('../../assets/images/p1.png')} 
+        className="w-[100px] h-[100px] rounded-xl mr-4" 
+      />
+      <View className="flex-1 justify-between">
+        <View>
+          <Text className="text-lg font-bold text-gray-900 font-dm mb-1" numberOfLines={1}>
+            {item.vendor_name || 'Service Provider'}
           </Text>
-          <Text style={styles.providerDistance}>• {item.distance}</Text>
-          <Ionicons name="location" style={[styles.shopIcon]}/>
+          <Text className="text-sm text-gray-500 font-dm mb-2" numberOfLines={1}>
+            {item.name}
+          </Text>
         </View>
-        <Text style={styles.providerPrice}>{item.price}</Text>
+        <View>
+          <View className="flex-row items-center mb-2">
+            <View className="flex-row items-center mr-3">
+              <Ionicons name="star" size={14} color="#FFA500" />
+              <Text className="text-sm text-gray-700 font-semibold font-dm ml-1">4.0</Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="location" size={14} color="#9CA3AF" />
+              <Text className="text-sm text-gray-500 font-dm ml-1">Nearby</Text>
+            </View>
+          </View>
+          <Text className="text-xl font-bold text-gray-900 font-dm">₹{item.price}</Text>
+        </View>
+        {item.is_available === false && (
+          <Text className="text-xs text-red-600 font-dm mt-1">Currently unavailable</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <View className="flex-row items-center justify-between px-5 pt-5 pb-4">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={()=> navigation.navigate("HamburgerMenu")}>
-          <Ionicons name="menu-outline" style={styles.icon} />
-        </TouchableOpacity>
+        <Text className="text-2xl font-semibold text-gray-900 font-dm flex-1">Garages</Text>
       </View>
 
-      <View style={styles.searchBarContainer}>
+      <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-full px-4 py-3 mx-5 mb-4">
+        <Ionicons name="search-outline" size={20} color="#9CA3AF" />
         <TextInput
-          style={styles.searchInput}
-          placeholder="Related Results"
-          placeholderTextColor="#0000008F"
+          className="flex-1 ml-2 text-base text-gray-900 font-dm"
+          placeholder="Search services or providers..."
+          placeholderTextColor="#9CA3AF"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
-        <Ionicons name="search-outline" size={24} color="#0000008F" />
       </View>
 
-      <View style={styles.filterContainer}>
-        <Text style={styles.resultsText}>
-          {providers.length} results • {activeFilters.length} filters applied
+      <View className="flex-row justify-between items-center px-5 mb-3">
+        <Text className="text-sm text-gray-600 font-dm">
+          {filteredServices.length} results
         </Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Foundation name="filter" size={24} color="rgba(78, 70, 180, 1)" style={styles.icon1} />
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)}
+          className="flex-row items-center gap-2 px-3 py-2 border border-[#E8E8E8] rounded-full"
+        >
+          <Foundation name="filter" size={18} color="#DC2626" />
+          <Text className="text-sm font-semibold text-gray-900 font-dm">Filters</Text>
+          {activeFilters.length > 0 && (
+            <View className="w-5 h-5 bg-red-600 rounded-full items-center justify-center">
+              <Text className="text-xs text-white font-bold">{activeFilters.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filtersRow}>
-        {activeFilters.map((filter, index) => (
-          <TouchableOpacity key={index} style={styles.filterChip}>
-            <Text style={styles.filterText}>{filter}</Text>
-            <TouchableOpacity onPress={() => removeFilter(index)}>
-              <Entypo name="squared-cross" style={styles.icon2}/>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {activeFilters.length > 0 && (
+        <View className="flex-row flex-wrap px-5 mb-3">
+          {activeFilters.map((filter, index) => (
+            <View key={index} className="flex-row items-center bg-red-50 border border-red-200 rounded-full px-3 py-1.5 mr-2 mb-2">
+              <Text className="text-sm text-red-600 font-semibold font-dm mr-2">{filter}</Text>
+              <TouchableOpacity onPress={() => removeFilter(index)}>
+                <Ionicons name="close-circle" size={18} color="#DC2626" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
 
-      <FlatList
-        data={providers}
-        renderItem={renderProvider}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="text-gray-500 mt-2 font-dm">Loading services...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredServices}
+          renderItem={renderProvider}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ paddingBottom: 80 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#DC2626']} />
+          }
+          ListEmptyComponent={
+            <View className="flex-1 justify-center items-center py-20">
+              <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-4">
+                <Ionicons name="search-outline" size={40} color="#9CA3AF" />
+              </View>
+              <Text className="text-gray-900 text-lg font-semibold font-dm">No services found</Text>
+              <Text className="text-gray-500 text-sm font-dm mt-2 text-center px-10">
+                Try adjusting your search or filters
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       <Modal
         animationType="slide"
@@ -212,25 +316,29 @@ export default function ProviderList({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay} 
+          className="flex-1 bg-black/50 justify-end"
           activeOpacity={1} 
           onPress={() => setModalVisible(false)}
         >
-          <View style={styles.modalContent}>
+          <View className="bg-white rounded-t-[20px]">
             <TouchableOpacity 
               activeOpacity={1} 
-              style={styles.modalContentInner}
+              className="p-6"
               onPress={e => e.stopPropagation()}
             >
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filter Options</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <Ionicons name="close" size={24} color="#000" />
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-2xl font-bold text-gray-900 font-dm">Filters</Text>
+                <TouchableOpacity 
+                  onPress={() => setModalVisible(false)}
+                  className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <Ionicons name="close" size={20} color="#374151" />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Distance: {distance} km</Text>
+              <View className="mb-6">
+                <Text className="text-base font-semibold text-gray-900 mb-3 font-dm">Distance</Text>
+                <Text className="text-sm text-gray-600 mb-3 font-dm">{distance} km</Text>
                 <CustomSlider
                   min={1}
                   max={20}
@@ -240,8 +348,9 @@ export default function ProviderList({ navigation }) {
                 />
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Price: ₹{price.toLocaleString()}</Text>
+              <View className="mb-6">
+                <Text className="text-base font-semibold text-gray-900 mb-3 font-dm">Price</Text>
+                <Text className="text-sm text-gray-600 mb-3 font-dm">₹0 - ₹{price.toLocaleString()}</Text>
                 <CustomSlider
                   min={0}
                   max={50000}
@@ -251,32 +360,39 @@ export default function ProviderList({ navigation }) {
                 />
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Minimum Rating: {rating}.0</Text>
-                <View style={styles.ratingContainer}>
+              <View className="mb-6">
+                <Text className="text-base font-semibold text-gray-900 mb-3 font-dm">Ratings</Text>
+                <View className="flex-row gap-3 flex-wrap">
                   {[1, 2, 3, 4, 5].map((value) => (
                     <TouchableOpacity
                       key={value}
-                      style={[
-                        styles.ratingButton,
-                        rating === value && styles.selectedRating
-                      ]}
+                      className={`items-center gap-1 ${
+                        rating === value ? '' : ''
+                      }`}
                       onPress={() => setRating(value)}
                     >
-                      <Text style={[
-                        styles.ratingButtonText,
-                        rating === value && styles.selectedRatingText
-                      ]}>{value}</Text>
+                      <View className={`w-10 h-10 rounded-full items-center justify-center ${
+                        rating === value ? 'bg-red-600' : 'bg-gray-100'
+                      }`}>
+                        <Ionicons 
+                          name="star" 
+                          size={20} 
+                          color={rating === value ? '#FFF' : '#9CA3AF'} 
+                        />
+                      </View>
+                      <Text className={`text-xs font-dm ${
+                        rating === value ? 'text-red-600 font-semibold' : 'text-gray-500'
+                      }`}>{value}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
               <TouchableOpacity
-                style={styles.applyButton}
+                className="bg-red-600 rounded-full py-4 items-center mt-6"
                 onPress={applyFilters}
               >
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                <Text className="text-white text-base font-semibold font-dm">Apply Filters</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           </View>
@@ -286,255 +402,3 @@ export default function ProviderList({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    gap:"75%",
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 37,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 20,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  filterContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    marginBottom: 10,
-  },
-  icon1: {
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 6,
-  },
-  icon2: {
-    borderRadius: 12,
-    fontSize:24,
-    color:'#4E46B4',
-  },
-  shopIcon: {
-    fontSize: 20,
-    color: "#000",
-  },
-  resultsText: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 10,
-  },
-  filtersRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E2E2E2',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  filterText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginRight: 5,
-  },
-  listContainer: {
-    paddingBottom: 10,
-  },
-  providerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 20,
-    padding: 10,
-    backgroundColor: '#fff',
-  },
-  providerImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    marginRight: 10,
-  },
-  providerDetails: {
-    flex: 1,
-  },
-  providerName: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#000',
-    fontFamily: "DM",
-    marginBottom: 4,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  providerRating: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontFamily: "DM",
-    fontWeight: '500',
-    marginRight: 4,
-  },
-  providerDistance: {
-    fontSize: 16,
-    color: '#000',
-    fontFamily: "DM",
-    fontWeight: '500',
-  },
-  providerPrice: {
-    fontSize: 24,
-    fontFamily: "DM",
-    fontWeight: '500',
-    color: '#000',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  modalContentInner: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    fontFamily: "DM",
-  },
-  filterSection: {
-    marginBottom: 20,
-  },
-  filterLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-    marginBottom: 10,
-    fontFamily: "DM",
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  ratingButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedRating: {
-    backgroundColor: '#4E46B4',
-    borderColor: '#4E46B4',
-  },
-  ratingButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-  },
-  selectedRatingText: {
-    color: '#fff',
-  },
-  applyButton: {
-    backgroundColor: '#4E46B4',
-    borderRadius: 25,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: "DM",
-  },
-  sliderContainer: {
-    height: 40,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  sliderTrack: {
-    height: 4,
-    backgroundColor: '#E2E2E2',
-    borderRadius: 2,
-  },
-  sliderFill: {
-    height: 4,
-    backgroundColor: '#4E46B4',
-    borderRadius: 2,
-    position: 'absolute',
-  },
-  sliderThumb: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#4E46B4',
-    borderRadius: 10,
-    position: 'absolute',
-    top: 10,
-    marginLeft: -10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  }
-});

@@ -1,34 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   Modal,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Fontisto from "react-native-vector-icons/Fontisto";
 
-export default function Payment3({ navigation }) {
+export default function Payment3({ navigation, route }) {
   const [otp, setOtp] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [showCheckbox, setShowCheckbox] = useState(true);
   const [resendModalVisible, setResendModalVisible] = useState(false);
   const [invalidOtpModalVisible, setInvalidOtpModalVisible] = useState(false);
+  const [amount, setAmount] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
   const correctOtp = "123456";
+
+  useEffect(() => {
+    // Get payment info from route params
+    const { amount: paymentAmount, bookingId: booking, service } = route?.params || {};
+    setAmount(paymentAmount || 0);
+    setBookingId(booking);
+    setServiceData(service);
+  }, [route?.params]);
 
   const CheckboxComponent = () => (
     <TouchableOpacity
-      style={styles.checkboxContainer}
+      className="flex-row items-center"
       onPress={() => setIsSaved(!isSaved)}
     >
-      <View style={[styles.checkbox, isSaved && styles.checkboxChecked]}>
-        {isSaved && <Text style={styles.checkmark}>✓</Text>}
+      <View className={`w-5 h-5 rounded border-2 items-center justify-center ${isSaved ? 'bg-red-600 border-red-600' : 'border-gray-300'}`}>
+        {isSaved && <Ionicons name="checkmark" size={14} color="white" />}
       </View>
-      <Text style={styles.checkboxText}>Save details for future</Text>
+      <Text className="ml-3 text-sm text-gray-700 font-dm">Save details for future payments</Text>
     </TouchableOpacity>
   );
 
@@ -42,7 +52,13 @@ export default function Payment3({ navigation }) {
 
   const handlePayment = () => {
     if (otp === correctOtp) {
-      navigation.navigate("PaymentSuccess");
+      navigation.navigate("PaymentSuccess", {
+        amount,
+        bookingId,
+        service: serviceData,
+        paymentMethod: 'card',
+        transactionId: `TXN${Date.now()}`,
+      });
     } else {
       setInvalidOtpModalVisible(true);
       setShowCheckbox(false); // Remove checkbox when invalid OTP is entered
@@ -55,51 +71,58 @@ export default function Payment3({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <View className="flex-row items-center justify-between px-5 mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
+        <Text className="text-2xl font-bold text-gray-900 font-dm">Payment</Text>
+        <View className="w-10" />
       </View>
 
-      <Text style={styles.title}>Payment</Text>
-      <Text style={styles.subtitle}>Select payment method</Text>
+      <Text className="text-sm text-gray-500 mb-6 font-dm px-5">Enter OTP to complete payment</Text>
 
-      <View style={styles.menuContainer}>
-        <View style={styles.menuItem}>
-          <Fontisto name="credit-card" size={20} color="#000" style={styles.menuIcon} />
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>Debit / Credit Card</Text>
+      <View className="mx-5 border border-[#E8E8E8] rounded-2xl mb-5 p-5 bg-white">
+        <View className="flex-row items-center mb-5">
+          <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+            <Fontisto name="credit-card" size={24} color="#DC2626" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-gray-900 font-dm">Debit / Credit Card</Text>
           </View>
         </View>
 
-        <Text style={styles.otpTitle}>OTP to xxxxxx3245</Text>
+        <Text className="text-sm text-gray-600 mb-2 font-dm">OTP sent to xxxxxx3245</Text>
         <TextInput
-          style={styles.otpInput}
+          className="h-12 border border-[#E8E8E8] rounded-xl px-4 text-base mb-4 font-dm bg-gray-50"
           placeholder="Enter 6-digit OTP"
+          placeholderTextColor="#9CA3AF"
           keyboardType="numeric"
           maxLength={6}
           value={otp}
           onChangeText={setOtp}
         />
-        <TouchableOpacity onPress={handleResendOtp}>
-          <Text style={styles.resendButton}>Resend OTP</Text>
+        <TouchableOpacity 
+          onPress={handleResendOtp}
+          className="py-3 rounded-full border border-[#E8E8E8] bg-white items-center mb-5"
+        >
+          <Text className="text-red-600 text-sm font-semibold font-dm">Resend OTP</Text>
         </TouchableOpacity>
 
         {showCheckbox && CheckboxComponent()}
       </View>
 
       <TouchableOpacity
-        style={[
-          styles.payButton,
-          otp.length === 6 ? styles.payButtonEnabled : styles.payButtonDisabled,
-        ]}
+        className={`py-4 rounded-full items-center mx-5 mb-5 ${otp.length === 6 ? 'bg-red-600' : 'bg-gray-300'}`}
         disabled={otp.length !== 6}
         onPress={handlePayment}
       >
-        <Text style={styles.payButtonText}
-         onPress={() => navigation.navigate("PaymentSuccess")}
-         >Pay ₹10,499</Text>
+        <Text className="text-white text-base font-bold font-dm">
+          Pay ₹{amount.toLocaleString()}
+        </Text>
       </TouchableOpacity>
 
       {/* Resend OTP Modal */}
@@ -109,10 +132,13 @@ export default function Payment3({ navigation }) {
         visible={resendModalVisible}
         onRequestClose={() => setResendModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>OTP Sent</Text>
-            <Text style={styles.modalText}>
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 w-[85%] items-center">
+            <View className="w-16 h-16 bg-green-50 rounded-full items-center justify-center mb-4">
+              <Ionicons name="checkmark-circle" size={40} color="#10B981" />
+            </View>
+            <Text className="text-lg font-bold mb-2 text-gray-900 font-dm">OTP Sent</Text>
+            <Text className="text-sm text-gray-600 text-center font-dm">
               A new OTP has been sent to xxxxxx3245
             </Text>
           </View>
@@ -126,17 +152,20 @@ export default function Payment3({ navigation }) {
         visible={invalidOtpModalVisible}
         onRequestClose={closeInvalidOtpModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitleError}>Invalid OTP</Text>
-            <Text style={styles.modalText}>
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 w-[85%] items-center">
+            <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-4">
+              <Ionicons name="close-circle" size={40} color="#DC2626" />
+            </View>
+            <Text className="text-lg font-bold mb-2 text-gray-900 font-dm">Invalid OTP</Text>
+            <Text className="text-sm text-gray-600 text-center mb-6 font-dm">
               The OTP you entered is incorrect. Please try again.
             </Text>
             <TouchableOpacity
-              style={styles.modalButton}
+              className="bg-red-600 py-3 px-8 rounded-full w-full"
               onPress={closeInvalidOtpModal}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
+              <Text className="text-white text-base font-bold text-center font-dm">Try Again</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -144,183 +173,3 @@ export default function Payment3({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  title: {
-    fontWeight: "500",
-    fontSize: 24,
-    marginLeft: 23,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    marginLeft: 20,
-  },
-  menuContainer: {
-    paddingVertical: 15, 
-    paddingHorizontal: 15,
-    width: "92%",
-    marginLeft: 15, 
-    borderColor: "#E2E2E2", 
-    borderWidth: 2, 
-    borderRadius: 16, 
-    marginBottom: 20, 
-    padding: 20,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    marginBottom: 20,
-    backgroundColor: "#fff",
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuText: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#1E1E1E",
-  },
-  otpTitle: {
-    fontSize: 16,
-    marginBottom: 10,
-    color: "#666",
-  },
-  otpInput: {
-    height: 50,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  resendButton: {
-    borderRadius: 8,
-    textAlign: 'center',
-    color: '#4E46B4',
-    fontSize: 16,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    padding: 15,
-    fontFamily: 'DM',
-    marginBottom: 20,
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: "#000",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#000",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  checkboxText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: "#0000008F",
-    fontFamily: 'DM',
-  },
-  payButton: {
-    padding: 15,
-    borderRadius: 30,
-    alignItems: "center",
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    width: "90%",
-  },
-  payButtonEnabled: {
-    backgroundColor: "#4E46B4",
-  },
-  payButtonDisabled: {
-    backgroundColor: "#0000008F",
-  },
-  payButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#4E46B4',
-  },
-  modalTitleError: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
-    color: '#FF3B30',
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#333',
-  },
-  modalButton: {
-    backgroundColor: '#4E46B4',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  modalButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});

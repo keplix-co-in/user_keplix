@@ -1,94 +1,87 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function Help({ navigation }) {
-  const faqs = [
-    'Lorem ipsum dolor sit amet',
-    'Consectetur adipiscing elit',
-    'Lorem ipsum dolor',
-    'Lorem ipsum dolor sit amet',
-    'Consectetur adipiscing elit',
-    'Lorem ipsum dolor',
-    'Lorem ipsum dolor sit amet',
+  const [expandedIndex, setExpandedIndex] = useState(null);
+
+  const helpTopics = [
+    {
+      title: 'Getting Started',
+      description: 'Learn how to create an account, complete your profile, and book your first service. Browse through available services and select the one that fits your needs.',
+    },
+    {
+      title: 'Managing Bookings',
+      description: 'View all your bookings in one place. You can track service status, reschedule appointments, or cancel bookings if needed. Receive real-time updates on your service progress.',
+    },
+    {
+      title: 'Payment Methods',
+      description: 'Add, update, or remove payment methods. We support credit/debit cards, UPI, net banking, and digital wallets. All transactions are secure and encrypted.',
+    },
+    {
+      title: 'Service Quality',
+      description: 'We ensure all our service providers are verified and trained. If you have any concerns about service quality, please contact our support team immediately.',
+    },
+    {
+      title: 'Account Security',
+      description: 'Protect your account with strong passwords and enable two-factor authentication. Never share your login credentials with anyone.',
+    },
+    {
+      title: 'Notifications',
+      description: 'Manage your notification preferences to stay updated about your bookings, special offers, and service updates. You can customize notifications in Settings.',
+    },
+    {
+      title: 'Refunds & Cancellations',
+      description: 'Understand our refund and cancellation policies. Refunds are processed within 5-7 business days. Cancellation charges may apply based on timing.',
+    },
   ];
 
+  const toggleTopic = (index) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <SafeAreaView className="flex-1 bg-white px-6" edges={['top']}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        <View className="mt-5 mb-5">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="mt-2.5 w-10 h-10 rounded-[20px] border-2 border-[#E2E2E2] justify-center items-center">
             <Ionicons name="arrow-back-outline" size={30} color="#000" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Help</Text>
+        <Text className="text-2xl font-medium mb-5 font-['DM'] text-[#0000008F]">Help</Text>
+        <Text className="text-sm text-[#666] mb-5 font-['DM']">Browse help topics to find quick answers</Text>
 
-        {faqs.map((item, index) => (
-          <View key={index}>
-            <TouchableOpacity style={styles.faqRow}>
-              <Text style={styles.faqText}>{item}</Text>
-              <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+        {helpTopics.map((item, index) => (
+          <View key={index} className="mb-2">
+            <TouchableOpacity 
+              className="flex-row justify-between items-center py-4 px-4 bg-[#F8F8F8] rounded-xl"
+              onPress={() => toggleTopic(index)}
+            >
+              <View className="flex-1 pr-2">
+                <Text className="text-base font-medium font-['DM'] text-black">{item.title}</Text>
+              </View>
+              <Ionicons 
+                name={expandedIndex === index ? "chevron-up" : "chevron-down"} 
+                size={24} 
+                color="#DC2626" 
+              />
             </TouchableOpacity>
-            <View style={styles.separator} />
+            
+            {expandedIndex === index && (
+              <View className="px-4 py-3 bg-white border-l-2 border-[#DC2626] mt-1">
+                <Text className="text-sm text-[#666] font-['DM'] leading-5">{item.description}</Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-  },
-  scrollContainer: {
-    paddingBottom: 20,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  backButton: {
-    marginTop:10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '500',
-    marginBottom: 20,
-    fontFamily: 'DM',
-    color: '#0000008F',
-  },
-  faqRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  faqText: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    color: '#000',
-  },
-  separator: {
-    height: 2,
-    backgroundColor: '#E2E2E2',
-  },
-});

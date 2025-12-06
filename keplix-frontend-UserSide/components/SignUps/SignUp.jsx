@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { authAPI } from '../../services/api';
 
 export default function SignUp({ navigation }) {
   const [email, setEmail] = useState('');
@@ -8,7 +10,7 @@ export default function SignUp({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [secureEntryNew, setSecureEntryNew] = useState(true);
   const [secureEntryConfirm, setSecureEntryConfirm] = useState(true);
-
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   // Email validation regex
@@ -26,228 +28,149 @@ export default function SignUp({ navigation }) {
     isPasswordMatch &&
     isPasswordLengthValid;
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     setSubmitted(true);
-    if (isFormValid) {
-      navigation.navigate("EmailVerify");
+    if (!isFormValid) return;
+
+    setLoading(true);
+
+    try {
+      // Sign up user
+      const response = await authAPI.signup({
+        email: email.trim(),
+        password: newPassword,
+        role: 'user', // User-side signup
+      });
+
+      // Send email verification OTP
+      await authAPI.sendEmailOTP(email.trim());
+
+      Alert.alert(
+        'Success',
+        'Account created! Please check your email for verification code.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate("EmailVerify", { email: email.trim() }),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Signup error:', error);
+      
+      if (error.response?.data?.error) {
+        Alert.alert('Signup Failed', error.response.data.error);
+      } else if (error.response?.data?.email) {
+        Alert.alert('Signup Failed', error.response.data.email[0]);
+      } else if (error.message === 'Network Error') {
+        Alert.alert('Network Error', 'Please check your internet connection and ensure the backend server is running.');
+      } else {
+        Alert.alert('Signup Failed', 'Unable to create account. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-
-      <View style={styles.backcontainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 p-5 bg-white">
+      <View className="flex-row items-center mb-10">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Sign Up</Text>
+      <Text className="font-medium text-black text-[32px] mb-8 font-['DM']">Sign Up</Text>
 
       <View>
-        <Text style={styles.enter}>Enter your email address</Text>
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your email address</Text>
         <TextInput
-          style={[
-            styles.input,
-            submitted && (!email.trim() || !isEmailValid) && { borderColor: 'red' },
-          ]}
+          className={`h-[56px] border-2 rounded-2xl px-4 text-base text-black font-['DM'] ${submitted && (!email.trim() || !isEmailValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}
           placeholder="Eg: xyz@gmail.com"
-          placeholderTextColor="#aaa"
+          placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
-      <View>
-        <Text style={styles.enter}>Enter your new password</Text>
-        <View style={[
-          styles.inputContainer,
-          submitted && (!newPassword.trim() || !isPasswordLengthValid) && { borderColor: 'red' }
-        ]}>
+      <View className="mt-5">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your new password</Text>
+        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${submitted && (!newPassword.trim() || !isPasswordLengthValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
           <TextInput
-            style={styles.input1}
-            placeholder="Min 6 characters"
-            placeholderTextColor="#aaa"
+            className="flex-1 text-base text-black font-['DM']"
+            placeholder="••••••••"
+            placeholderTextColor="#999"
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry={secureEntryNew}
           />
           <TouchableOpacity onPress={() => setSecureEntryNew(prev => !prev)}>
             <Ionicons
-              name={secureEntryNew ? "eye-off" : "eye"}
-              style={styles.iconInsideInput}
+              name={secureEntryNew ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#999"
             />
           </TouchableOpacity>
         </View>
       </View>
 
-      <Text style={styles.enter}>Confirm new password</Text>
-      <View style={[
-        styles.inputContainer1,
-        submitted && (!confirmPassword.trim() || !isPasswordMatch) && { borderColor: 'red' }
-      ]}>
-        <TextInput
-          style={styles.input1}
-          placeholder="Re-enter password"
-          placeholderTextColor="#aaa"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={secureEntryConfirm}
-        />
-        <TouchableOpacity onPress={() => setSecureEntryConfirm(prev => !prev)}>
-          <Ionicons
-            name={secureEntryConfirm ? "eye-off" : "eye"}
-            style={styles.iconInsideInput}
+      <View className="mt-5">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Confirm new password</Text>
+        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${submitted && (!confirmPassword.trim() || !isPasswordMatch) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
+          <TextInput
+            className="flex-1 text-base text-black font-['DM']"
+            placeholder="••••••••"
+            placeholderTextColor="#999"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={secureEntryConfirm}
           />
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSecureEntryConfirm(prev => !prev)}>
+            <Ionicons
+              name={secureEntryConfirm ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#999"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      <View className="flex-1" />
+
       <TouchableOpacity
-        style={[
-          styles.button,
-          { backgroundColor: isFormValid ? 'red' : '#888' },
-        ]}
+        className={`rounded-full py-4 items-center mb-4 ${isFormValid && !loading ? 'bg-red-600' : 'bg-[#CCCCCC]'}`}
         onPress={handleVerify}
         activeOpacity={0.7}
+        disabled={loading}
       >
-        <Text style={styles.buttonText}>Verify</Text>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-medium font-['DM']">Verify</Text>
+        )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("SignUpPhone")}>
-        <Text style={styles.createAccountText}>
-          or Sign up using 
-          <Text style={{color: "red" , fontWeight: "15"}}>{" "}Phone number</Text>
+      <TouchableOpacity 
+        onPress={() => navigation.navigate("SignUpPhone")}
+      >
+        <Text className="text-center text-[#666] text-sm border-2 border-[#E8E8E8] py-4 px-6 rounded-full font-['DM']">
+          Sign up using{' '}
+          <Text className="text-red-600 font-medium font-['DM']">Phone number</Text>
         </Text>
       </TouchableOpacity>
 
-      <Text style={styles.footerText}>
+      <Text className="text-xs text-[#999] text-center px-8 mt-5 mb-5 font-['DM']">
         By signing or logging in, you agree to the{' '}
-        <Text style={styles.link}>Terms and Conditions</Text> of service and{' '}
-        <Text style={styles.link}>Privacy Policy</Text>
+        <Text className="text-red-600 font-['DM']">Terms and Conditions</Text> of service and{' '}
+        <Text className="text-red-600 font-['DM']">Privacy Policy</Text>
       </Text>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: 'white',
-  },
-  backcontainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    color: 'black',
-    borderWidth: 2,
-    borderRadius: 50,
-  },
-  text: {
-    fontSize: 24,
-    marginRight: 30,
-    color: "black",
-    fontFamily: 'DM',
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  title: {
-    fontWeight: '500',
-    color: 'black',
-    fontSize: 32,
-    marginBottom: 10,
-    fontFamily: 'DM',
-  },
-  enter: {
-    fontSize: 16,
-    color: 'black',
-    marginBottom: 10,
-    fontFamily: 'DM',
-  },
-  input: {
-    height: 50,
-    borderColor: '#ddd',
-    // borderColor: 'black',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 30,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    fontFamily: 'DM',
-    color: 'black',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    color: 'black',
-    alignItems: 'center',
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 30,
-    paddingHorizontal: 10,
-  },
-  inputContainer1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 50,
-    paddingHorizontal: 10,
-  },
-  input1: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: 'black',
-    fontFamily: 'DM',
-  },
-  iconInsideInput: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
-  button: {
-    backgroundColor: 'red',
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 70,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  createAccountText: {
-    borderRadius: 70,
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 15,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    padding: 15,
-    fontFamily: 'DM',
-  },
-  footerText: {
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 20,
-    padding: 20,
-    fontFamily: 'DM',
-  },
-  link: {
-    color: 'red',
-    textDecorationLine: 'underline',
-    fontFamily: 'DM',
-  },
-});
+

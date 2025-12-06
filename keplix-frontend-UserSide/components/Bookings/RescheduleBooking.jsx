@@ -3,20 +3,26 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   StatusBar,
   Modal,
-  Dimensions,
   Pressable,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { bookingsAPI } from '../../services/api';
 
-export default function RescheduleBooking({ navigation }) {
+export default function RescheduleBooking({ navigation, route }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 5));
-   const [modalVisible, setModalVisible] = useState(false); 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Get booking data from navigation params
+  const booking = route?.params?.booking || null; 
 
   const formatMonthYear = (date) => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -46,12 +52,67 @@ export default function RescheduleBooking({ navigation }) {
     }
   };
 
-  const handleConfirm = () => {
-    setModalVisible(false);
-    navigation.navigate('RescheduledBooking', {
-      date: `${selectedDate} June 2024`,
-      time: selectedTime
-    });
+  const handleConfirm = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user ID from AsyncStorage
+      const userData = await AsyncStorage.getItem('user_data');
+      if (!userData) {
+        Alert.alert('Error', 'User data not found. Please login again.');
+        return;
+      }
+      
+      const user = JSON.parse(userData);
+      const userId = user.user_id || user.id;
+      
+      // Format date for API (YYYY-MM-DD)
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      // Format time for API (HH:MM:SS)
+      const [time, period] = selectedTime.split(/(?=[AP]M)/);
+      let [hours, minutes] = time.split(':');
+      hours = parseInt(hours);
+      
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      const formattedTime = `${String(hours).padStart(2, '0')}:${minutes || '00'}:00`;
+      
+      // Update booking via API
+      const updateData = {
+        booking_date: formattedDate,
+        booking_time: formattedTime,
+        status: 'pending' // Set to pending for vendor to reconfirm
+      };
+      
+      await bookingsAPI.updateBooking(userId, booking.id, updateData);
+      
+      setModalVisible(false);
+      
+      // Navigate to success screen
+      navigation.navigate('RescheduledBooking', {
+        booking: {
+          ...booking,
+          booking_date: formattedDate,
+          booking_time: formattedTime
+        }
+      });
+    } catch (error) {
+      console.error('Error rescheduling booking:', error);
+      Alert.alert(
+        'Error', 
+        error.response?.data?.message || 'Failed to reschedule booking. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCalendarDates = () => {
@@ -104,9 +165,30 @@ export default function RescheduleBooking({ navigation }) {
 
   // Function to check if date is available (customize as needed)
   const isDateAvailable = (date) => {
-    const availableDates = [5, 9, 10, 11, 25, 26];
-    return availableDates.includes(date);
+    if (!date) return false;
+    const today = new Date();
+    const selectedDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
+    // Only allow future dates
+    return selectedDateTime >= today.setHours(0, 0, 0, 0);
   };
+
+  // Check if booking data exists
+  if (!booking) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center" edges={['top']}>
+        <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-4">
+          <Ionicons name="alert-circle-outline" size={40} color="#9CA3AF" />
+        </View>
+        <Text className="text-lg text-gray-900 font-semibold font-dm">No booking data available</Text>
+        <TouchableOpacity 
+          className="bg-red-600 py-3 px-6 rounded-full mt-6"
+          onPress={() => navigation.goBack()}
+        >
+          <Text className="text-white font-dm font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Handle date selection
   const handleDateSelect = (date) => {
@@ -121,56 +203,63 @@ export default function RescheduleBooking({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.backcontainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+      <View className="flex-row items-center justify-between mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
-        <View style={styles.titleContainer}>
-          <Text style={styles.text}>Reschedule Booking</Text>
-        </View>
+        <Text className="text-2xl font-bold text-gray-900 font-dm">Reschedule Booking</Text>
+        <View className="w-10" />
       </View>
 
-      <View style={styles.calendarContainer}>
-        <View style={styles.monthSelector}>
-          <TouchableOpacity onPress={handlePreviousMonth}>
-            <Ionicons name="chevron-back" style={styles.dropdownIcon} />
+      <View className="bg-white border border-[#E8E8E8] rounded-2xl p-5 mb-5">
+        <View className="flex-row justify-between items-center mb-5">
+          <TouchableOpacity 
+            onPress={handlePreviousMonth}
+            className="w-8 h-8 rounded-full border border-[#E8E8E8] items-center justify-center"
+          >
+            <Ionicons name="chevron-back" size={18} color="#DC2626" />
           </TouchableOpacity>
-          <Text style={styles.monthText}>{formatMonthYear(currentDate)}</Text>
-          <TouchableOpacity onPress={handleNextMonth}>
-            <Ionicons name="chevron-forward" style={styles.dropdownIcon} />
+          <Text className="text-base font-bold text-gray-900 font-dm">{formatMonthYear(currentDate)}</Text>
+          <TouchableOpacity 
+            onPress={handleNextMonth}
+            className="w-8 h-8 rounded-full border border-[#E8E8E8] items-center justify-center"
+          >
+            <Ionicons name="chevron-forward" size={18} color="#DC2626" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.daysRow}>
+        <View className="flex-row justify-around mb-3">
           {daysOfWeek.map((day, index) => (
-            <Text key={index} style={styles.dayLabel}>
-              {day}
+            <Text key={index} className="text-xs text-gray-500 font-semibold font-dm w-10 text-center">
+              {day.substring(0, 3)}
             </Text>
           ))}
         </View>
 
-        <View style={styles.calendarGrid}>
+        <View className="rounded-xl">
           {getCalendarDates().map((week, weekIndex) => (
-            <View key={weekIndex} style={styles.weekRow}>
+            <View key={weekIndex} className="flex-row justify-around">
               {week.map((date, dateIndex) => (
                 <TouchableOpacity
                   key={dateIndex}
                   onPress={() => handleDateSelect(date)}
-                  style={[
-                    styles.dateCell,
-                    date && isDateAvailable(date) && styles.availableDate,
-                    date && selectedDate === date && styles.selectedDate,
-                  ]}
-                  disabled={!date}
+                  className={`w-10 h-10 justify-center items-center my-0.5 rounded-full ${
+                    date && selectedDate === date ? 'bg-red-600' : ''
+                  }`}
+                  disabled={!date || !isDateAvailable(date)}
                 >
                   <Text
-                    style={[
-                      date && styles.dateText,
-                      date && isDateAvailable(date) && styles.availableDateText,
-                      date && selectedDate === date && styles.selectedDateText,
-                    ]}
+                    className={`text-sm font-dm ${
+                      !date ? '' : 
+                      date && selectedDate === date ? 'text-white font-bold' : 
+                      date && isDateAvailable(date) ? 'text-gray-900 font-medium' : 
+                      'text-gray-300'
+                    }`}
                   >
                     {date || ''}
                   </Text>
@@ -181,23 +270,21 @@ export default function RescheduleBooking({ navigation }) {
         </View>
       </View>
 
-      <View style={styles.timeSlotsContainer}>
-        <Text style={styles.sectionTitle}>Available Time Slots:</Text>
-        <View style={styles.timeGrid}>
+      <View className="px-1">
+        <Text className="text-sm font-semibold font-dm mb-3 text-gray-900">Available Time Slots</Text>
+        <View className="flex-row flex-wrap gap-2">
           {timeSlots.map((time, index) => (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.timeSlot,
-                selectedTime === time && styles.selectedTimeSlot,
-              ]}
+              className={`px-5 py-2.5 rounded-full border ${
+                selectedTime === time ? 'bg-red-600 border-red-600' : 'bg-white border-[#E8E8E8]'
+              }`}
               onPress={() => handleTimeSelect(time)}
             >
               <Text
-                style={[
-                  styles.timeText,
-                  selectedTime === time && styles.selectedTimeText,
-                ]}
+                className={`text-sm font-semibold font-dm ${
+                  selectedTime === time ? 'text-white' : 'text-gray-900'
+                }`}
               >
                 {time}
               </Text>
@@ -206,15 +293,16 @@ export default function RescheduleBooking({ navigation }) {
         </View>
       </View>
 
-       <TouchableOpacity
-        style={[
-          styles.bookButton,
-          selectedDate && selectedTime && styles.bookButtonActive,
-        ]}
+      <View className="flex-1" />
+
+      <TouchableOpacity
+        className={`mx-1 mb-4 py-4 rounded-full items-center ${
+          selectedDate && selectedTime ? 'bg-red-600' : 'bg-gray-300'
+        }`}
         disabled={!selectedDate || !selectedTime}
         onPress={handleProceed}
       >
-        <Text style={styles.bookButtonText}>Reschedule</Text>
+        <Text className="text-white text-base font-bold font-dm">Reschedule</Text>
       </TouchableOpacity>
 
       <Modal
@@ -224,33 +312,43 @@ export default function RescheduleBooking({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable 
-          style={styles.modalOverlay}
+          className="flex-1 bg-black/50 justify-center items-center px-6"
           onPress={() => setModalVisible(false)}
         >
-          <View style={styles.modalView}>
+          <Pressable className="w-full bg-white rounded-3xl p-6 items-center">
             <TouchableOpacity 
-              style={styles.closeButton}
+              className="absolute top-4 right-4 w-8 h-8 items-center justify-center z-10"
               onPress={() => setModalVisible(false)}
             >
-              <Ionicons name="close" size={24} color="black" />
+              <Ionicons name="close" size={24} color="#9CA3AF" />
             </TouchableOpacity>
             
-            <Text style={styles.modalTitle}>
-              Are you sure you want to{'\n'}Reschedule your booking to
+            <View className="w-20 h-20 bg-red-50 rounded-full items-center justify-center mb-5 mt-2">
+              <Ionicons name="calendar" size={40} color="#DC2626" />
+            </View>
+            
+            <Text className="text-lg font-bold text-gray-900 text-center mb-3 font-dm">
+              Are you sure you want to{'\n'}reschedule your booking?
             </Text>
-            <Text style={styles.modalDateTime}>
-              26 June 2024
-              <Text style={styles.modalTime}> at 6:00PM</Text>
-              <Text style={styles.modalQuestion}> ?</Text>
-            </Text>
+            
+            <View className="bg-gray-50 border border-[#E8E8E8] rounded-2xl p-4 mb-6 w-full">
+              <Text className="text-base text-gray-900 font-bold text-center font-dm">
+                {selectedDate} {formatMonthYear(currentDate)} at {selectedTime}
+              </Text>
+            </View>
             
             <TouchableOpacity
-              style={styles.confirmButton}
+              className="bg-red-600 py-4 rounded-full w-full mb-3"
               onPress={handleConfirm}
+              disabled={loading}
             >
-              <Text style={styles.confirmButtonText}>Confirm</Text>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white text-base font-bold text-center font-dm">Confirm</Text>
+              )}
             </TouchableOpacity>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -258,242 +356,4 @@ export default function RescheduleBooking({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  backcontainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-  },
-  text: {
-    fontSize: 24,
-    marginRight: 30,
-    color: "#000",
-    fontFamily: 'DM',
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  backButton: {
-    padding: 8,
-  },
-  calendarContainer: {
-    padding: 16,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 24,
-  },
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  monthText: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  dayLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    width: 40,
-    textAlign: 'center',
-  },
-  calendarGrid: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  dateCell: {
-    marginLeft: 8,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  availableDateText: {
-    color: 'black',
-    fontFamily: 'DM',
-    fontWeight: 'bold'
-  },
-  selectedDate: {
-    backgroundColor: 'red',
-    borderRadius: 20,
-  },
-  selectedDateText: {
-    color: '#fff',
-  },
-  timeSlotsContainer: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginBottom: 16,
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  timeSlot: {
-    marginBottom:10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  selectedTimeSlot: {
-    backgroundColor: 'red',
-    borderColor: '#E2E2E2',
-  },
-  timeText: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  selectedTimeText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  bookButton: {
-    marginTop:100,
-    margin: 16,
-    padding: 16,
-    borderRadius: 70,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-  },
-  bookButtonActive: {
-    backgroundColor: 'red',
-  },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  dropdownIcon: {
-    width:20,
-    height: 30,
-    fontSize: 18,
-    lineHeight:26,
-    color: "red",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "red",
-    borderWidth: 1.5,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalView: {
-    width: '80%',
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 10,
-  },
-  modalTitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 10,
-    lineHeight: 24,
-    fontFamily: 'DM',
-  },
-  modalDateTime: {
-    fontSize: 18,
-    color: '#000',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontFamily: 'DM',
-  },
-  modalTime: {
-    color: '#000',
-    fontFamily: 'DM',
-  },
-  modalQuestion: {
-    color: '#666',
-    fontFamily: 'DM',
-  },
-  confirmButton: {
-    backgroundColor: 'red',
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    marginTop: 10,
-    width: '100%',
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    fontFamily: 'DM',
-  },
-});
 

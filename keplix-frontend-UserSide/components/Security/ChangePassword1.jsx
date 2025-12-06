@@ -1,44 +1,98 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../services/api';
 
-export default function ChangePassword1({ navigation }) {
+export default function ChangePassword1({ navigation, route }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [secureEntryNew, setSecureEntryNew] = useState(true);
   const [secureEntryConfirm, setSecureEntryConfirm] = useState(true);
+  const [changing, setChanging] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+
+  useEffect(() => {
+    loadCurrentPassword();
+  }, []);
+
+  const loadCurrentPassword = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('temp_current_password');
+      if (stored) {
+        setCurrentPassword(stored);
+      } else if (route?.params?.currentPassword) {
+        setCurrentPassword(route.params.currentPassword);
+      }
+    } catch (error) {
+      console.error('Error loading password:', error);
+    }
+  };
 
   const isValid =
     newPassword.length >= 8 && confirmPassword.length >= 8;
 
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (!currentPassword) {
+      Alert.alert('Error', 'Current password not found. Please go back and try again.');
+      return;
+    }
+
+    setChanging(true);
+    try {
+      await authAPI.changePassword(currentPassword, newPassword);
+      
+      // Clear stored temporary password
+      await AsyncStorage.removeItem('temp_current_password');
+      
+      navigation.navigate('PasswordReseted');
+    } catch (error) {
+      console.error('Error changing password:', error);
+      Alert.alert(
+        'Password Change Failed',
+        error.response?.data?.detail || 
+        error.response?.data?.message || 
+        'Failed to change password. Please check your current password and try again.'
+      );
+    } finally {
+      setChanging(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 p-5 bg-white">
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.backcontainer}>
+        <View className="flex-row items-center mb-10">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+            <Ionicons name={"arrow-back-outline"} size={30} color="#000" style={{borderColor: '#E2E2E2', borderWidth: 2, borderRadius: 50}} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Change Password</Text>
+        <Text className="font-medium text-[28px] mb-[30px] font-['DM']">Change Password</Text>
 
         <View>
-          <Text style={styles.enter}>Enter your new password</Text>
-          <View style={styles.inputContainer}>
+          <Text className="text-base text-[#0000008F] mb-2.5 font-['DM']">Enter your new password</Text>
+          <View className="flex-row items-center border-2 border-[#ddd] rounded-[70px] mb-[30px] px-2.5">
             <TextInput
-              style={styles.input1}
+              className="flex-1 h-[50px] text-base text-black font-['DM']"
               placeholder="Eg: a62gjf7hi"
               placeholderTextColor="#aaa"
               value={newPassword}
@@ -48,16 +102,17 @@ export default function ChangePassword1({ navigation }) {
             <TouchableOpacity onPress={() => setSecureEntryNew(prev => !prev)}>
               <Ionicons
                 name={secureEntryNew ? "eye-off" : "eye"}
-                style={styles.iconInsideInput}
+                size={24}
+                style={{marginLeft: 10}}
               />
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.enter}>Confirm new password </Text>
-        <View style={styles.inputContainer}>
+        <Text className="text-base text-[#0000008F] mb-2.5 font-['DM']">Confirm new password </Text>
+        <View className="flex-row items-center border-2 border-[#ddd] rounded-[70px] mb-[30px] px-2.5">
           <TextInput
-            style={styles.input1}
+            className="flex-1 h-[50px] text-base text-black font-['DM']"
             placeholder="Eg: a62gjf7hi"
             placeholderTextColor="#aaa"
             value={confirmPassword}
@@ -67,90 +122,26 @@ export default function ChangePassword1({ navigation }) {
           <TouchableOpacity onPress={() => setSecureEntryConfirm(prev => !prev)}>
             <Ionicons
               name={secureEntryConfirm ? "eye-off" : "eye"}
-              style={styles.iconInsideInput}
+              size={24}
+              style={{marginLeft: 10}}
             />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.buttonWrapper}>
+        <View className="mt-auto pb-2.5">
           <TouchableOpacity
-            style={[
-              styles.button,
-              { backgroundColor: isValid ? '#4E46B4' : '#0000008F' }
-            ]}
-            disabled={!isValid}
-            onPress={() => navigation.navigate('PasswordReseted')}
+            className={`rounded-[70px] py-4 items-center ${isValid ? 'bg-[#DC2626]' : 'bg-[#0000008F]'}`}
+            disabled={!isValid || changing}
+            onPress={handleChangePassword}
           >
-            <Text style={styles.buttonText}>Change Password</Text>
+            {changing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-white text-base font-medium font-['DM']">Change Password</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  backcontainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 28,
-    marginBottom: 30,
-    fontFamily: 'DM',
-  },
-  enter: {
-    fontSize: 16,
-    color: '#0000008F',
-    marginBottom: 10,
-    fontFamily: 'DM',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 30,
-    paddingHorizontal: 10,
-  },
-  input1: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: '#000',
-    fontFamily: 'DM',
-  },
-  iconInsideInput: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
-  buttonWrapper: {
-    marginTop: 'auto',
-    paddingBottom: 10,
-  },
-  button: {
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-});

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { View, Text, Animated } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-export default function PaymentSuccess({ navigation }) {
+export default function PaymentSuccess({ navigation, route }) {
   const [scale] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -14,46 +15,26 @@ export default function PaymentSuccess({ navigation }) {
     }).start();
 
     const timeout = setTimeout(() => {
-      navigation.navigate('PaymentConfirmation'); 
+      // Pass all payment data to confirmation screen
+      const { amount, bookingId, paymentMethod, transactionId, service } = route?.params || {};
+      navigation.navigate('PaymentConfirmation', {
+        amount: amount || 0,
+        bookingId: bookingId,
+        paymentMethod: paymentMethod || 'card',
+        transactionId: transactionId || `TXN${Date.now()}`,
+        service: service,
+      }); 
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [route?.params]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.checkContainer, { transform: [{ scale }] }]}>
-        <Ionicons name="checkmark-circle" style={styles.checkIcon} />
+    <SafeAreaView className="flex-1 justify-center items-center bg-white">
+      <Animated.View className="justify-center items-center bg-[#E7F9F2] rounded-full w-[120px] h-[120px]" style={{ transform: [{ scale }] }}>
+        <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
       </Animated.View>
-      <Text style={styles.message}>Payment Successful</Text>
+      <Text className="mt-5 text-lg text-center text-[#333] font-['DM']">Payment Successful</Text>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  checkContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#E7F9F2',
-    borderRadius: 100,
-    width: 120,
-    height: 120,
-  },
-  checkIcon: {
-    fontSize: 80,
-    color: '#4CAF50',
-  },
-  message: {
-    marginTop: 20,
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#333',
-    fontFamily:'DM',
-  },
-});

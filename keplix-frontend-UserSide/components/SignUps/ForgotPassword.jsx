@@ -1,128 +1,94 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons"
+import { authAPI } from '../../services/api';
 
 
 export default function ForgotPassword({navigation}) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  // const isFormFilled = email.trim()!==''; 
-  const isFormFilled = /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim());
+  const [loading, setLoading] = useState(false);
+  const isFormFilled = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim());
+
+  const handleContinue = async () => {
+    if (!isFormFilled) return;
+
+    setLoading(true);
+
+    try {
+      await authAPI.forgotPassword(email.trim());
+      
+      Alert.alert(
+        'Success',
+        'Password reset OTP has been sent to your email.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate("ResetPassword", { email: email.trim() }),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      
+      if (error.response?.data?.error) {
+        Alert.alert('Error', error.response.data.error);
+      } else if (error.message === 'Network Error') {
+        Alert.alert('Network Error', 'Please check your internet connection and ensure the backend server is running.');
+      } else {
+        Alert.alert('Error', 'Failed to send reset email. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.backcontainer}>
-      <TouchableOpacity onPress={()=> navigation.goBack()}>
-        <Ionicons name={"arrow-back-outline"} style={styles.icon} />
-      </TouchableOpacity>
-       </View>
-
-
-      <Text style={styles.title}>Forgot Password</Text>
-
-      <View>
-      <Text style={styles.enter}>Enter your email address</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Eg: xyz@gmail.com"
-        placeholderTextColor="#aaa"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+    <SafeAreaView className="flex-1 p-5 bg-white">
+      <View className="flex-row items-center mb-10">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={[styles.button,
-        {backgroundColor: isFormFilled ? 'red': 'grey'}
-      ]} onPress={()=> navigation.navigate("ResetPassword")}>
-        <Text style={styles.buttonText}>Continue</Text>
+      <Text className="font-medium text-black text-[32px] mb-2 font-['DM']">Forgot Password</Text>
+
+      <View className="mt-8">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your email address</Text>
+        <TextInput
+          className="text-black h-[56px] border-2 border-[#E8E8E8] rounded-2xl px-4 text-base font-['DM']"
+          placeholder="Eg: xyz@gmail.com"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+
+      <View className="flex-1" />
+
+      <TouchableOpacity 
+        className={`rounded-full py-4 items-center mb-5 ${isFormFilled && !loading ? 'bg-red-600' : 'bg-[#CCCCCC]'}`} 
+        onPress={handleContinue}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-medium font-['DM']">Continue</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity>
-        <Text style={styles.createAccountText}>
-          or Reset the password via 
-          <Text style={{color: 'red', fontWeight: 'bold'}}>
-            {" "}phone number
-          </Text>
+        <Text className="text-center text-[#666] text-sm border-2 border-[#E8E8E8] py-4 px-6 rounded-full font-['DM']">
+          Reset the password via{' '}
+          <Text className="text-red-600 font-medium font-['DM']">phone number</Text>
         </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: 'white',
-  },
-  backcontainer:{
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 40,
-  },
-  icon: {
-    fontSize: 30, 
-    borderColor:'#E2E2E2',
-    borderWidth:2,
-    color :"black",
-    borderRadius:50,
-  },
-  text: {
-    fontSize: 24, 
-    marginRight:30,
-    color:"#0000008F",
-    fontFamily:'DM',
-  },
-  titleContainer: {
-  flex: 1, 
-  alignItems: 'center',
-  },
-  title: {
-    fontWeight:500,
-    color: 'black',
-    fontSize: 32,
-    marginBottom: 40,
-    fontFamily:'DM',
-  },
-  enter:{
-    fontSize: 16,
-    color: 'black',
-    marginBottom: 10,
-    fontFamily:'DM',
-  },
-  input: {
-    color:'black',
-    height: 50,
-    borderColor: '#ddd',
-    borderWidth: 2,
-    borderRadius: 70,
-    marginBottom: 350,
-    paddingHorizontal: 10,
-    fontSize: 16, 
-    fontFamily:'DM', 
-  },
-  button: {
-    backgroundColor: 'red',
-    borderRadius: 70,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 500,
-    fontFamily:'DM',
-  },
-  createAccountText: {
-    borderRadius:70,
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
-    borderColor:'#E2E2E2',
-    borderWidth:2,
-    padding:15,
-    fontFamily:'DM',
-  },
-});

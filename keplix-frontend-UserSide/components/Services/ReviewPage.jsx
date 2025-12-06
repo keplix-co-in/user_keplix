@@ -1,170 +1,193 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { bookingsAPI } from '../../services/api';
 
 export default function ReviewPage({ route, navigation }) {
   const [note, setNote] = useState('');
-  const { date, time } = route.params;
+  const [creating, setCreating] = useState(false);
+  const [userData, setUserData] = useState(null);
+  
+  // Get params with fallback - if no date/time, user should go through BookSlot first
+  const params = route.params || {};
+  const date = params.date;
+  const time = params.time;
+  const serviceData = params.service || {};
+  const vendorData = params.vendor || {};
+
+  useEffect(() => {
+    loadUserData();
+    // If date/time is missing, redirect to BookSlot
+    if (!date || !time) {
+      Alert.alert(
+        'Missing Information',
+        'Please select a date and time slot first.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (serviceData.id) {
+                navigation.navigate('BookSlot', { serviceData });
+              } else {
+                navigation.goBack();
+              }
+            }
+          }
+        ]
+      );
+    }
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem('user_data');
+      if (storedUser) {
+        setUserData(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const handleProceed = async () => {
+    if (!userData?.id) {
+      Alert.alert('Error', 'Please login to create a booking');
+      navigation.navigate('SignIn');
+      return;
+    }
+
+    if (!date || !time) {
+      Alert.alert('Error', 'Please select date and time first');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const bookingData = {
+        user: userData.id,
+        vendor: vendorData.id || 1, // Default vendor if not provided
+        service: serviceData.id || 1, // Default service if not provided
+        scheduled_date: date,
+        scheduled_time: time,
+        notes: note.trim(),
+        status: 'pending',
+        total_cost: serviceData.price || 10499,
+      };
+
+      const response = await bookingsAPI.createBooking(userData.id, bookingData);
+      
+      if (response.data) {
+        // Navigate to payment with booking details
+        navigation.navigate("Payment1", {
+          amount: response.data.total_cost || 10499,
+          bookingId: response.data.id,
+          service: serviceData,
+          booking: response.data,
+        });
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      Alert.alert(
+        'Booking Failed',
+        error.response?.data?.message || 'Failed to create booking. Please try again.'
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" style={styles.icon} />
+    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
+      <View className="flex-row items-center mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Summary</Text>
+      <Text className="text-2xl font-semibold mb-5 font-['DM']">Booking Summary</Text>
 
-      <View style={styles.summaryContainer}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Service</Text>
-          <Text style={styles.value}>Engine Repair</Text>
+      <View className="bg-gray-50 border border-[#E8E8E8] rounded-2xl p-4">
+        <View className="flex-row justify-between items-center py-3 border-b border-gray-200">
+          <Text className="text-sm text-[#666] font-['DM']">Service</Text>
+          <Text className="text-base font-semibold font-['DM'] text-right flex-1 ml-4">
+            {serviceData.name || 'Engine Repair'}
+          </Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Provider</Text>
-          <Text style={styles.value}>Dwarka Mor Service</Text>
+        <View className="flex-row justify-between items-center py-3 border-b border-gray-200">
+          <Text className="text-sm text-[#666] font-['DM']">Provider</Text>
+          <Text className="text-base font-semibold font-['DM'] text-right flex-1 ml-4">
+            {vendorData.business_name || 'Dwarka Mor Service'}
+          </Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Distance</Text>
-          <View style={styles.distanceContainer}>
-            <Ionicons name="location" size={20} color="black" />
-            <Text style={styles.value}>7 km away</Text>
+        <View className="flex-row justify-between items-center py-3 border-b border-gray-200">
+          <Text className="text-sm text-[#666] font-['DM']">Distance</Text>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="location" size={16} color="#666" />
+            <Text className="text-base font-semibold font-['DM']">
+              {vendorData.distance || '7'} km
+            </Text>
           </View>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Date</Text>
-          <Text style={styles.value}>{date}</Text>
+        <View className="flex-row justify-between items-center py-3 border-b border-gray-200">
+          <Text className="text-sm text-[#666] font-['DM']">Date</Text>
+          <Text className="text-base font-semibold font-['DM']">{date}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Time</Text>
-          <Text style={styles.value}>{time}</Text>
+        <View className="flex-row justify-between items-center py-3 border-b border-gray-200">
+          <Text className="text-sm text-[#666] font-['DM']">Time</Text>
+          <Text className="text-base font-semibold font-['DM']">{time}</Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Total Price</Text>
-          <Text style={styles.priceValue}>₹10,499</Text>
+        <View className="flex-row justify-between items-center py-3">
+          <Text className="text-sm text-[#666] font-['DM']">Total Amount</Text>
+          <Text className="text-xl font-bold text-red-600 font-['DM']">
+            ₹{serviceData.price || '10,499'}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.noteSection}>
-        <Text style={styles.noteLabel}>Any note (optional):</Text>
+      <View className="mt-6">
+        <Text className="text-base font-semibold mb-2 font-['DM']">Special Instructions</Text>
+        <Text className="text-xs text-[#999] mb-2 font-['DM']">(Optional)</Text>
         <TextInput
-          style={styles.noteInput}
-          placeholder="add here"
+          className="bg-white border border-[#E8E8E8] rounded-2xl p-4 h-[100px] font-['DM'] text-gray-900"
+          placeholder="Add any special requests or notes..."
+          placeholderTextColor="#999"
           value={note}
           onChangeText={setNote}
           multiline
+          textAlignVertical="top"
         />
       </View>
 
-      <TouchableOpacity style={styles.proceedButton} onPress={() => navigation.navigate("Payment1")}>
-        <Text style={styles.proceedButtonText}>Proceed</Text>
+      <View className="flex-1" />
+
+      <TouchableOpacity 
+        className="bg-red-600 py-4 rounded-full items-center mb-5" 
+        onPress={handleProceed}
+        disabled={creating}
+      >
+        {creating ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-base font-semibold font-['DM']">Proceed to Payment</Text>
+        )}
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '500',
-    marginBottom: 20,
-    fontFamily: 'DM',
-  },
-  summaryContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    gap: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E2E2',
-  },
-  label: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'DM',
-  },
-  value: {
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  priceValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#4E46B4',
-    fontFamily: 'DM',
-  },
-  noteSection: {
-    marginTop: 24,
-  },
-  noteLabel: {
-    fontSize: 16,
-    color: '#000',
-    marginBottom: 8,
-    fontFamily: 'DM',
-  },
-  noteInput: {
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
-    borderRadius: 12,
-    padding: 16,
-    height: 100,
-    textAlignVertical: 'top',
-    fontFamily: 'DM',
-  },
-  proceedButton: {
-    backgroundColor: '#4E46B4',
-    padding: 16,
-    borderRadius: 70,
-    alignItems: 'center',
-    marginTop: 'auto',
-    marginBottom: 20,
-  },
-  proceedButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-});

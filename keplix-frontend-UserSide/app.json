@@ -9,14 +9,22 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "statusBar": {
+        "style": "light"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.aryan1611.UserSide"
+      "package": "com.aryan1611.UserSide",
+      "softwareKeyboardLayoutMode": "pan",
+      "statusBar": {
+        "translucent": true,
+        "backgroundColor": "transparent"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -33,7 +41,10 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

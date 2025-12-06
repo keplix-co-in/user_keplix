@@ -3,24 +3,23 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
 
 const MenuItem = ({ icon, title, onPress, showBorder = true }) => (
   <TouchableOpacity
-    style={[styles.menuItem, showBorder && styles.menuItemBorder]}
+    className={`flex-row items-center justify-between px-4 py-4 ${showBorder ? 'border-b border-gray-100' : ''}`}
     onPress={onPress}
   >
-    <View style={styles.menuContent}>
-      <View style={styles.leftContent}>
-        <Ionicons name={icon} size={24} color="black" />
-        <Text style={styles.menuText}>{title}</Text>
+    <View className="flex-row items-center gap-3">
+      <View className="w-10 h-10 bg-gray-100 rounded-xl items-center justify-center">
+        <Ionicons name={icon} size={20} color="#374151" />
       </View>
-      <Ionicons name="chevron-forward" style={styles.dropdownIcon} />
+      <Text className="text-base text-gray-900 font-dm">{title}</Text>
     </View>
+    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
   </TouchableOpacity>
 );
 
@@ -42,23 +41,23 @@ export default function Support({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View className="flex-row items-center px-5 pt-5 pb-4">
         <TouchableOpacity 
-          style={styles.icon}
           onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
         >
-          <Ionicons name="arrow-back" size={30} color="black" />
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
+        <View className="flex-1 items-center pr-10">
+          <Text className="text-2xl font-semibold text-gray-900 font-dm">Support & Help</Text>
+        </View>
       </View>
 
-      <Text style={styles.headerTitle}>Support & Help</Text>
-
-
-      <View style={styles.menuContainer}>
+      <View className="mt-2">
         <MenuItem 
           icon="document-text"
           title="FAQ's"
@@ -84,70 +83,3 @@ export default function Support({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 20,
-  },
-  icon: {
-    marginTop:10,
-    fontSize: 30,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '500',
-    marginLeft: 16,
-    color: '#0000008F',
-    fontFamily: 'DM',
-  },
-  menuContainer: {
-    marginTop: 20,
-  },
-  menuItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#E2E2E2',
-  },
-  menuContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  leftContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuText: {
-    fontSize: 20,
-    marginLeft: 12,
-    color: '#000',
-    fontFamily: 'DM',
-  },
-  dropdownIcon: {
-    width:20,
-    height: 30,
-    fontSize: 18,
-    lineHeight:26,
-    color: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "rgba(0, 0, 0, 0.56)",
-    borderWidth: 1.5,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-});

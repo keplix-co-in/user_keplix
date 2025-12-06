@@ -1,10 +1,32 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { View, Text, Animated } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-export default function RescheduledBooking({ navigation }) {
+export default function RescheduledBooking({ navigation, route }) {
   const [scale] = useState(new Animated.Value(0));
+  
+  // Get booking data from navigation params
+  const booking = route?.params?.booking || null;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatTime = (timeString) => {
+    const time = new Date(`2000-01-01T${timeString}`);
+    return time.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+  };
 
   useEffect(() => {
     Animated.spring(scale, {
@@ -16,45 +38,36 @@ export default function RescheduledBooking({ navigation }) {
 
     const timeout = setTimeout(() => {
       navigation.navigate('BookingList'); 
-    }, 2000);
+    }, 2500);
 
     return () => clearTimeout(timeout);
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.checkContainer, { transform: [{ scale }] }]}>
-        <Ionicons name="checkmark-circle" style={styles.checkIcon} />
+    <SafeAreaView className="flex-1 justify-center items-center bg-white px-6">
+      <Animated.View 
+        className="w-32 h-32 bg-green-50 rounded-full items-center justify-center mb-6" 
+        style={{ transform: [{ scale }] }}
+      >
+        <Ionicons name="checkmark-circle" size={80} color="#10B981" />
       </Animated.View>
-      <Text style={styles.message}>Your booking has been Rescheduled successfully.</Text>
+      <Text className="text-xl font-bold text-gray-900 text-center mb-3 font-dm">
+        Your booking has been{'\n'}Rescheduled successfully
+      </Text>
+      {booking && (
+        <View className="bg-gray-50 border border-[#E8E8E8] p-5 rounded-2xl w-full mb-4">
+          <Text className="text-sm text-gray-600 font-dm text-center mb-2">New booking time:</Text>
+          <Text className="text-base text-gray-900 font-dm font-bold text-center">
+            {formatDate(booking.booking_date)}
+          </Text>
+          <Text className="text-base text-gray-900 font-dm font-bold text-center">
+            at {formatTime(booking.booking_time)}
+          </Text>
+        </View>
+      )}
+      <Text className="text-sm text-gray-500 text-center font-dm">
+        Redirecting to bookings list...
+      </Text>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  checkContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#E7F9F2',
-    borderRadius: 100,
-    width: 120,
-    height: 120,
-  },
-  checkIcon: {
-    fontSize: 80,
-    color: '#4CAF50',
-  },
-  message: {
-    marginTop: 20,
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#333',
-    fontFamily:'DM',
-  },
-});

@@ -3,37 +3,40 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   ScrollView,
-  Image
+  Image,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Payment4({ navigation }) {
   const [upiId, setUpiId] = useState("");
   const [isUpiValid, setIsUpiValid] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const upiDatabase = {
-    GooglePay: "googlepay@upi",
-    Paytm: "paytm@upi",
-    PhonePe: "phonepe@upi",
-    Amazon: "amazon@upi",
+    GooglePay: "@okaxis",
+    Paytm: "@paytm",
+    PhonePe: "@ybl",
+    Amazon: "@apl",
   };
 
-  // Validate UPI ID (10 digit number + ID suffix)
+  // Validate UPI ID - supports multiple formats
   const validateUpiId = (input) => {
-    // Check for pattern: 10 digits followed by @ and some text
-    const upiPattern = /^\d{10}@[a-zA-Z0-9]+$/;
+    // Pattern: phone@provider or name@provider
+    const upiPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
     return upiPattern.test(input);
   };
 
   const handleUpiInputChange = (input) => {
-    setUpiId(input);
-    setIsUpiValid(validateUpiId(input));
+    setUpiId(input.toLowerCase().trim());
+    setIsUpiValid(validateUpiId(input.trim()));
     // Reset verification status when input changes
     if (isVerified) {
       setIsVerified(false);
@@ -41,291 +44,214 @@ export default function Payment4({ navigation }) {
   };
 
   const handleAppClick = (appName) => {
-    // When clicking an app, we should set a valid UPI ID format
-    // For this example, we'll use a dummy 10-digit number with the app's UPI suffix
-    const dummyNumber = "9876543210";
-    const selectedUpiId = dummyNumber + upiDatabase[appName];
-    setUpiId(selectedUpiId);
-    setIsUpiValid(validateUpiId(selectedUpiId));
-    // Reset verification status
-    setIsVerified(false);
+    // Prompt user to enter their UPI ID for the selected app
+    const provider = upiDatabase[appName];
+    Alert.alert(
+      `${appName} UPI`,
+      `Enter your UPI ID (e.g., yourname${provider})`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
   };
 
-  const handleVerify = () => {
-    if (isUpiValid) {
+  const handleVerify = async () => {
+    if (!isUpiValid) {
+      Alert.alert('Invalid UPI ID', 'Please enter a valid UPI ID');
+      return;
+    }
+
+    setLoading(true);
+
+    // Simulate verification (in production, verify with payment gateway)
+    setTimeout(() => {
       setIsVerified(true);
+      setLoading(false);
+      Alert.alert('Success', 'UPI ID verified successfully!');
+    }, 1500);
+  };
+
+  const handleAddUPI = async () => {
+    if (!isVerified) {
+      Alert.alert('Verification Required', 'Please verify your UPI ID first');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get existing payment methods
+      const savedMethods = await AsyncStorage.getItem('payment_methods');
+      const methods = savedMethods ? JSON.parse(savedMethods) : { cards: [], upiIds: [], default: 'card' };
+
+      // Add UPI ID
+      if (!methods.upiIds) methods.upiIds = [];
+      
+      // Check if UPI ID already exists
+      const exists = methods.upiIds.some(upi => upi.upiId === upiId);
+      if (exists) {
+        Alert.alert('Already Exists', 'This UPI ID is already saved');
+        setLoading(false);
+        return;
+      }
+
+      const newUPI = {
+        upiId: upiId,
+        provider: getUPIProvider(upiId),
+        addedDate: new Date().toISOString(),
+        isVerified: true,
+      };
+
+      methods.upiIds.push(newUPI);
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('payment_methods', JSON.stringify(methods));
+
+      Alert.alert(
+        'Success',
+        'UPI ID added successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('ConfirmUpdate'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving UPI ID:', error);
+      Alert.alert('Error', 'Failed to add UPI ID. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const getUPIProvider = (upiId) => {
+    const provider = upiId.split('@')[1];
+    const providerMap = {
+      'okaxis': 'Google Pay',
+      'paytm': 'Paytm',
+      'ybl': 'PhonePe',
+      'apl': 'Amazon Pay',
+      'axisbank': 'Axis Bank',
+      'icici': 'ICICI Bank',
+    };
+    return providerMap[provider] || 'UPI';
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
+        <View className="flex-row items-center mb-5 p-5">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+            <Ionicons name={"arrow-back-outline"} size={24} className="border-2 border-[#E2E2E2] rounded-full p-[5px]" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Payment</Text>
-        <Text style={styles.subtitle}>Select payment method</Text>
+        <Text className="font-medium text-2xl font-['DM'] ml-[23px]">Payment</Text>
+        <Text className="text-base text-[#666] mb-[30px] font-medium font-['DM'] ml-5">Select payment method</Text>
 
-        <View style={styles.cardContainer}>
-          <TouchableOpacity style={styles.menuItem}>
-            <FontAwesome5 name="rupee-sign" size={24} color="#000" style={styles.menuIcon} />
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>UPI</Text>
+        <View className="flex-1 p-5 mx-[15px] border-2 border-[#E2E2E2] rounded-2xl bg-white">
+          <TouchableOpacity className="flex-row items-center justify-between mb-5">
+            <FontAwesome5 name="rupee-sign" size={24} color="#000" className="mr-2.5" />
+            <View className="flex-1">
+              <Text className="text-2xl font-medium text-[#1E1E1E] font-['DM']">UPI</Text>
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.chooseAppText}>Choose App</Text>
+          <Text className="text-xs text-black font-medium font-['DM'] mb-2.5">Choose App</Text>
 
-          <View style={styles.appRow}>
+          <View className="flex-row justify-between my-5">
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-2.5 border-2 border-[#E2E2E2] rounded-lg p-2.5"
               onPress={() => handleAppClick("GooglePay")}
             >
               <Image
                 source={require("../../assets/images/icons8-google-pay-48.png")}
-                style={styles.appImage}
+                className="h-11 w-11"
+                resizeMode="contain"
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-2.5 border-2 border-[#E2E2E2] rounded-lg p-2.5"
               onPress={() => handleAppClick("Paytm")}
             >
               <Image
                 source={require("../../assets/images/icons8-paytm-48.png")}
-                style={styles.appImage}
+                className="h-11 w-11"
+                resizeMode="contain"
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-2.5 border-2 border-[#E2E2E2] rounded-lg p-2.5"
               onPress={() => handleAppClick("PhonePe")}
             >
               <Image
                 source={require("../../assets/images/phonepe-icon.png")}
-                style={styles.appImage}
+                className="h-11 w-11"
+                resizeMode="contain"
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-2.5 border-2 border-[#E2E2E2] rounded-lg p-2.5"
               onPress={() => handleAppClick("Amazon")}
             >
               <Image
                 source={require("../../assets/images/icons8-amazon-48.png")}
-                style={styles.appImage}
+                className="h-11 w-11"
+                resizeMode="contain"
               />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>Or</Text>
-            <View style={styles.line} />
+          <View className="flex-row items-center my-2.5 mx-2.5 w-[95%]">
+            <View className="flex-1 h-px bg-[#ddd]" />
+            <Text className="mx-2.5 text-[#0000008F] font-semibold font-['DM']">Or</Text>
+            <View className="flex-1 h-px bg-[#ddd]" />
           </View>
 
-          <Text style={styles.chooseAppText}>Enter UPI ID</Text>
-          <View style={styles.menuItem}>
+          <Text className="text-xs text-black font-medium font-['DM'] mb-2.5">Enter UPI ID</Text>
+          <View className="flex-row items-center justify-between mb-5">
             <TextInput
-              style={styles.input}
+              className="border border-[#E2E2E2] rounded-lg p-2.5 text-sm w-[75%] mx-[5px]"
               placeholder="Enter UPI ID"
               value={upiId}
               onChangeText={handleUpiInputChange}
             />
 
             <TouchableOpacity
-              style={[
-                styles.verifyButton,
-                {
-                  backgroundColor: isUpiValid
-                    ? isVerified
-                      ? "#fff"
-                      : "#40A69F"
-                    : "#0000008F"
-                }
-              ]}
+              className={`p-3 rounded-lg items-center ${isUpiValid && !loading ? (isVerified ? 'bg-green-100' : 'bg-[#40A69F]') : 'bg-[#0000008F]'}`}
               onPress={handleVerify}
-              disabled={!isUpiValid}
+              disabled={!isUpiValid || loading || isVerified}
             >
-              <Text
-                style={[
-                  styles.verifyButtonText,
-                  isVerified && { color: "#40A69F" },
-                ]}
-              >
-                {isVerified ? "Verified" : "Verify"}
-              </Text>
+              {loading && !isVerified ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text
+                  className={`text-sm font-semibold font-['DM'] ${isVerified ? 'text-green-700' : 'text-white'}`}
+                >
+                  {isVerified ? "✓ Verified" : "Verify"}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.payButton,
-            isVerified ? { backgroundColor: "#4E46B4" } : { backgroundColor: "#0000008F" },
-          ]}
-          onPress={() => {
-            if (isVerified) {
-              navigation.navigate("ConfirmUpdate");
-            }
-          }}
-          disabled={!isVerified}
+          className={`p-[15px] rounded-[70px] items-center mx-5 mt-[180px] ${isVerified && !loading ? 'bg-[#DC2626]' : 'bg-[#0000008F]'}`}
+          onPress={handleAddUPI}
+          disabled={!isVerified || loading}
         >
-          <Text style={styles.payButtonText}>Add UPI</Text>
+          {loading && isVerified ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-base font-semibold font-['DM']">Add UPI</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 20,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 24,
-    fontFamily: 'DM',
-    marginLeft: 23,
-  },
-  cardContainer: {
-    flex: 1,
-    padding: 20,
-    marginHorizontal: 15,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuText: {
-    fontSize: 24,
-    fontWeight: "500",
-    color: "#1E1E1E",
-    fontFamily: "DM",
-  },
-  menusubText: {
-    fontSize: 12,
-    color: "rgba(0, 0, 0, 0.56)",
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 15,
-  },
-  chooseAppText: {
-    fontSize: 12,
-    color: "#000",
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 10,
-  },
-  appRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 20,
-  },
-  appIcon: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
-  appImage: {
-    height: 44,
-    width: 44,
-    resizeMode: 'contain',
-  },
-  iconBorder: {
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 8,
-    padding: 10,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-    marginHorizontal: 10,
-    width: '95%',
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  orText: {
-    marginHorizontal: 10,
-    color: '#0000008F',
-    fontWeight: '600',
-    fontFamily: 'DM',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E2E2E2",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    width: '75%',
-    marginHorizontal: 5,
-  },
-  verifyButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  verifyButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'DM',
-  },
-  payButton: {
-    padding: 15,
-    borderRadius: 70,
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginTop: 180,
-  },
-  payButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: 'DM',
-  },
-});

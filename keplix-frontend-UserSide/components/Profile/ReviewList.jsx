@@ -5,17 +5,20 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
-  StyleSheet,
   TextInput,
-  SafeAreaView,
   Modal,
   PanResponder,
-  Animated
+  Animated,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Foundation from "react-native-vector-icons/Foundation";
 import Entypo from 'react-native-vector-icons/Entypo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { reviewsAPI } from '../../services/api';
 
 const CustomSlider = ({ min, max, value, step, onChange }) => {
   const [sliderWidth, setSliderWidth] = useState(0);
@@ -60,24 +63,25 @@ const CustomSlider = ({ min, max, value, step, onChange }) => {
 
   return (
     <View
-      style={styles.sliderContainer}
+      className="h-10 justify-center relative"
       onLayout={(event) => setSliderWidth(event.nativeEvent.layout.width)}
     >
-      <View style={styles.sliderTrack} />
+      <View className="h-1 bg-[#E2E2E2] rounded-sm" />
       <Animated.View
-        style={[
-          styles.sliderFill,
-          { width: position },
-        ]}
+        className="h-1 bg-[#DC2626] rounded-sm absolute"
+        style={{ width: position }}
       />
       <Animated.View
         {...panResponder.panHandlers}
-        style={[
-          styles.sliderThumb,
-          {
-            transform: [{ translateX: position }],
-          },
-        ]}
+        className="w-5 h-5 bg-[#DC2626] rounded-full absolute top-2.5 -ml-2.5"
+        style={{
+          transform: [{ translateX: position }],
+          elevation: 3,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+        }}
       />
     </View>
   );
@@ -92,6 +96,58 @@ export default function ReviewList({ navigation }) {
   const [activeFilters, setActiveFilters] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    loadUserReviews();
+  }, []);
+
+  const loadUserReviews = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem('user_data');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        setUserData(user);
+
+        // Fetch user's reviews
+        const response = await reviewsAPI.getReviews({ user_id: user.id });
+        if (response.data) {
+          setReviews(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      Alert.alert('Error', 'Failed to load your reviews');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    Alert.alert(
+      'Delete Review',
+      'Are you sure you want to delete this review?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await reviewsAPI.deleteReview(reviewId, userData.id);
+              setReviews(reviews.filter(review => review.id !== reviewId));
+              Alert.alert('Success', 'Review deleted successfully');
+            } catch (error) {
+              console.error('Error deleting review:', error);
+              Alert.alert('Error', 'Failed to delete review');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const providers = [
     {
@@ -145,38 +201,72 @@ export default function ReviewList({ navigation }) {
 
   const renderProvider = ({ item }) => (
     <View>
-      <Text style={styles.dateText}>{item.date}</Text>
-      <TouchableOpacity style={styles.providerCard} onPress={()=> navigation.navigate("Review")}>
-        <Image source={item.image} style={styles.providerImage} />
-        <View style={styles.providerDetails}>
-          <Text style={styles.providerName}>{item.name}</Text>
-          <View style={styles.ratingRow}>
-            <Text style={styles.providerRating}>
+      <Text className="text-sm text-[#0000008F] font-medium font-['DM'] mb-1 ml-1">
+        {item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }) : 'Date not available'}
+      </Text>
+      <TouchableOpacity 
+        className="flex-row items-center mb-4 border-2 border-[#E2E2E2] rounded-[20px] p-2.5 bg-white" 
+        onPress={() => navigation.navigate("Review", { 
+          booking: { id: item.booking },
+          vendor: { id: item.vendor },
+        })}
+      >
+        <Image 
+          source={
+            item.vendor_profile_picture 
+              ? { uri: item.vendor_profile_picture }
+              : require('../../assets/images/p1.png')
+          }
+          className="w-[120px] h-[120px] rounded-2xl mr-2.5" 
+        />
+        <View className="flex-1">
+          <Text className="text-lg font-medium text-black font-['DM'] mb-1">
+            {item.vendor_name || 'Service Provider'}
+          </Text>
+          <View className="flex-row items-center mb-1">
+            <Text className="text-base text-[#0000008F] font-['DM'] font-medium mr-1">
               {item.rating}{' '}
-              <MaterialIcons name="star" size={16} color="#4E46B4" />
+              <MaterialIcons name="star" size={16} color="#DC2626" />
             </Text>
-            <Text style={styles.providerDistance}>• {item.distance}</Text>
-            <Ionicons name="location" style={[styles.shopIcon]}/>
+            {item.distance && (
+              <>
+                <Text className="text-base text-black font-['DM'] font-medium">• {item.distance}</Text>
+                <Ionicons name="location" size={20} color="#000" />
+              </>
+            )}
           </View>
-          <Text style={styles.providerPrice}>{item.price}</Text>
+          <Text className="text-sm text-[#666] font-['DM'] mb-2" numberOfLines={2}>
+            {item.comment || 'No comment'}
+          </Text>
+          <TouchableOpacity 
+            onPress={() => handleDeleteReview(item.id)}
+            className="self-start px-3 py-1 bg-red-100 rounded-lg"
+          >
+            <Text className="text-red-600 text-xs font-medium">Delete</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView className="flex-1 bg-white p-5 pb-0" edges={['top']}>
+      <View className="flex-row items-center mb-5">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+          <Ionicons name={"arrow-back-outline"} size={30} color="#000" style={{borderColor: '#E2E2E2', borderWidth: 2, borderRadius: 50, padding: 5}} />
         </TouchableOpacity>
+        <Text className="text-2xl font-semibold text-black font-['DM'] ml-4">My Reviews</Text>
       </View>
 
       {showSearch && (
-        <View style={styles.searchBarContainer}>
+        <View className="flex-row items-center border-2 border-[#E2E2E2] rounded-[37px] px-2.5 py-1 mb-5">
           <TextInput
-            style={styles.searchInput}
-            placeholder="Search services..."
+            className="flex-1 text-base text-[#0000008F] font-medium font-['DM']"
+            placeholder="Search reviews..."
             placeholderTextColor="#0000008F"
             value={searchText}
             onChangeText={setSearchText}
@@ -185,39 +275,52 @@ export default function ReviewList({ navigation }) {
         </View>
       )}
 
-      <View style={styles.filterContainer}>
-        <Text style={styles.resultsText}>
-          {providers.length} results {activeFilters.length > 0 ? `• ${activeFilters.length} filters applied` : ''}
+      <View className="flex-row justify-between items-center px-1 mb-2.5">
+        <Text className="text-base text-[#0000008F] font-medium font-['DM'] mb-2.5">
+          {reviews.length} reviews {activeFilters.length > 0 ? `• ${activeFilters.length} filters applied` : ''}
         </Text>
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity onPress={toggleSearch} style={styles.actionButton}>
-            <Ionicons name="search" size={24} color="rgba(78, 70, 180, 1)" style={styles.icon1} />
+        <View className="flex-row items-center">
+          <TouchableOpacity onPress={toggleSearch} className="ml-2.5">
+            <Ionicons name="search" size={24} color="rgba(78, 70, 180, 1)" style={{borderColor: '#E2E2E2', borderWidth: 2, borderRadius: 50, padding: 6}} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.actionButton}>
-            <Foundation name="filter" size={24} color="rgba(78, 70, 180, 1)" style={styles.icon1} />
+          <TouchableOpacity onPress={() => setModalVisible(true)} className="ml-2.5">
+            <Foundation name="filter" size={24} color="rgba(78, 70, 180, 1)" style={{borderColor: '#E2E2E2', borderWidth: 2, borderRadius: 50, padding: 6}} />
           </TouchableOpacity>
         </View>
       </View>
 
       {activeFilters.length > 0 && (
-        <View style={styles.filtersRow}>
+        <View className="flex-row flex-wrap mb-5">
           {activeFilters.map((filter, index) => (
-            <TouchableOpacity key={index} style={styles.filterChip}>
-              <Text style={styles.filterText}>{filter}</Text>
+            <TouchableOpacity key={index} className="flex-row items-center bg-[#E2E2E2] rounded-[20px] px-2.5 py-1 mr-2.5 mb-2.5">
+              <Text className="text-base text-black font-medium font-['DM'] mr-1">{filter}</Text>
               <TouchableOpacity onPress={() => removeFilter(index)}>
-                <Entypo name="squared-cross" style={styles.icon2}/>
+                <Entypo name="squared-cross" size={24} color="#DC2626" style={{borderRadius: 12}} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      <FlatList
-        data={providers}
-        renderItem={renderProvider}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#DC2626" />
+          <Text className="mt-4 text-base text-[#666] font-['DM']">Loading reviews...</Text>
+        </View>
+      ) : reviews.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <Ionicons name="star-outline" size={64} color="#ccc" />
+          <Text className="mt-4 text-lg text-[#666] font-['DM']">No reviews yet</Text>
+          <Text className="mt-2 text-sm text-[#999] font-['DM']">Your reviews will appear here</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={reviews}
+          renderItem={renderProvider}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{paddingBottom: 10}}
+        />
+      )}
 
       <Modal
         animationType="slide"
@@ -226,25 +329,25 @@ export default function ReviewList({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <TouchableOpacity 
-          style={styles.modalOverlay} 
+          className="flex-1 bg-black/50 justify-end" 
           activeOpacity={1} 
           onPress={() => setModalVisible(false)}
         >
-          <View style={styles.modalContent}>
+          <View className="bg-white rounded-t-[20px]">
             <TouchableOpacity 
               activeOpacity={1} 
-              style={styles.modalContentInner}
+              className="p-5"
               onPress={e => e.stopPropagation()}
             >
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filter Options</Text>
+              <View className="flex-row justify-between items-center mb-5">
+                <Text className="text-xl font-semibold text-black font-['DM']">Filter Options</Text>
                 <TouchableOpacity onPress={() => setModalVisible(false)}>
                   <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Distance: {distance} km</Text>
+              <View className="mb-5">
+                <Text className="text-base font-medium text-black mb-2.5 font-['DM']">Distance: {distance} km</Text>
                 <CustomSlider
                   min={1}
                   max={20}
@@ -254,8 +357,8 @@ export default function ReviewList({ navigation }) {
                 />
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Price: ₹{price.toLocaleString()}</Text>
+              <View className="mb-5">
+                <Text className="text-base font-medium text-black mb-2.5 font-['DM']">Price: ₹{price.toLocaleString()}</Text>
                 <CustomSlider
                   min={0}
                   max={50000}
@@ -265,39 +368,33 @@ export default function ReviewList({ navigation }) {
                 />
               </View>
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Minimum Rating: {rating}.0</Text>
-                <View style={styles.ratingContainer}>
+              <View className="mb-5">
+                <Text className="text-base font-medium text-black mb-2.5 font-['DM']">Minimum Rating: {rating}.0</Text>
+                <View className="flex-row justify-between mt-2.5">
                   {[1, 2, 3, 4, 5].map((value) => (
                     <TouchableOpacity
                       key={value}
-                      style={[
-                        styles.ratingButton,
-                        rating === value && styles.selectedRating
-                      ]}
+                      className={`w-10 h-10 rounded-full border-2 justify-center items-center ${rating === value ? 'bg-[#DC2626] border-[#DC2626]' : 'border-[#E2E2E2]'}`}
                       onPress={() => setRating(value)}
                     >
-                      <Text style={[
-                        styles.ratingButtonText,
-                        rating === value && styles.selectedRatingText
-                      ]}>{value}</Text>
+                      <Text className={`text-base font-medium ${rating === value ? 'text-white' : 'text-black'}`}>{value}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
               <TouchableOpacity
-                style={styles.applyButton}
+                className="bg-[#DC2626] rounded-[25px] p-4 items-center mt-5"
                 onPress={applyFilters}
               >
-                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                <Text className="text-white text-base font-semibold font-['DM']">Apply Filters</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      <View style={styles.bottomNav}>
+      <View className="flex-row justify-around p-4 bg-white border-t border-[#eee] absolute bottom-0 left-0 right-0">
         <NavItem 
           icon="home" 
           text="Home" 
@@ -330,320 +427,14 @@ export default function ReviewList({ navigation }) {
 
 const NavItem = ({ icon, text, active, navigation, targetScreen }) => (
   <TouchableOpacity 
-    style={styles.navItem} 
+    className="items-center flex-1" 
     onPress={() => navigation.navigate(targetScreen)}
   >
     <Ionicons 
       name={icon} 
       size={34} 
-      color={active ? "#4E46B4" : "#666"} 
+      color={active ? "#DC2626" : "#666"} 
     />
-    <Text style={[styles.navText, active && styles.activeNavText]}>{text}</Text>
+    <Text className={`text-xs mt-1 ${active ? 'text-[#DC2626]' : 'text-[#666]'}`}>{text}</Text>
   </TouchableOpacity>
 );
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
-    paddingBottom: 0,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 37,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 20,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  filterContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    marginBottom: 10,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButton: {
-    marginLeft: 10,
-  },
-  icon1: {
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 6,
-  },
-  icon2: {
-    borderRadius: 12,
-    fontSize: 24,
-    color: '#4E46B4',
-  },
-  shopIcon: {
-    fontSize: 20,
-    color: "#000",
-  },
-  resultsText: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 10,
-  },
-  filtersRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E2E2E2',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  filterText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginRight: 5,
-  },
-  listContainer: {
-    paddingBottom: 10,
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#0000008F',
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 5,
-    marginLeft: 5,
-  },
-  providerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 20,
-    padding: 10,
-    backgroundColor: '#fff',
-  },
-  providerImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-    marginRight: 10,
-  },
-  providerDetails: {
-    flex: 1,
-  },
-  providerName: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#000',
-    fontFamily: "DM",
-    marginBottom: 4,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  providerRating: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontFamily: "DM",
-    fontWeight: '500',
-    marginRight: 4,
-  },
-  providerDistance: {
-    fontSize: 16,
-    color: '#000',
-    fontFamily: "DM",
-    fontWeight: '500',
-  },
-  providerPrice: {
-    fontSize: 24,
-    fontFamily: "DM",
-    fontWeight: '500',
-    color: '#000',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  modalContentInner: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    fontFamily: "DM",
-  },
-  filterSection: {
-    marginBottom: 20,
-  },
-  filterLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-    marginBottom: 10,
-    fontFamily: "DM",
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  ratingButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedRating: {
-    backgroundColor: '#4E46B4',
-    borderColor: '#4E46B4',
-  },
-  ratingButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000',
-  },
-  selectedRatingText: {
-    color: '#fff',
-  },
-  applyButton: {
-    backgroundColor: '#4E46B4',
-    borderRadius: 25,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: "DM",
-  },
-  sliderContainer: {
-    height: 40,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  sliderTrack: {
-    height: 4,
-    backgroundColor: '#E2E2E2',
-    borderRadius: 2,
-  },
-  sliderFill: {
-    height: 4,
-    backgroundColor: '#4E46B4',
-    borderRadius: 2,
-    position: 'absolute',
-  },
-  sliderThumb: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#4E46B4',
-    borderRadius: 10,
-    position: 'absolute',
-    top: 10,
-    marginLeft: -10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 15,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  navItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  navText: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  activeNavText: {
-    color: '#4E46B4',
-  },
-  iconleft: {
-    padding: 4,
-    borderRadius: 30,
-    backgroundColor: "#4E46B4",
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    marginLeft: 10,
-  }
-});

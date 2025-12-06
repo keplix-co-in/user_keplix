@@ -1,18 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function BookSlot({ navigation }) {
+export default function BookSlot({ route, navigation }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 2)); 
+  const [currentDate, setCurrentDate] = useState(new Date()); 
+  const [serviceData, setServiceData] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Get service data from route params or AsyncStorage
+  useEffect(() => {
+    loadServiceData();
+  }, []);
+
+  const loadServiceData = async () => {
+    try {
+      setLoading(true);
+      
+      // Try to get from route params first
+      let data = route?.params?.serviceData;
+      
+      // If not in params, load from AsyncStorage
+      if (!data) {
+        const savedService = await AsyncStorage.getItem('selected_service');
+        if (savedService) {
+          data = JSON.parse(savedService);
+        }
+      }
+      
+      setServiceData(data);
+      
+      // Load available time slots (can be customized per service)
+      const slots = [
+        '10:30 AM',
+        '11:30 AM',
+        '2:00 PM',
+        '3:30 PM',
+        '4:30 PM',
+        '6:00 PM'
+      ];
+      setAvailableSlots(slots);
+      
+    } catch (error) {
+      console.error('Error loading service data:', error);
+      Alert.alert('Error', 'Failed to load booking information.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatMonthYear = (date) => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -27,12 +73,38 @@ export default function BookSlot({ navigation }) {
     setSelectedDate(null); 
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     if (selectedDate && selectedTime) {
-      navigation.navigate('ReviewPage', {
-        date: `${selectedDate} June 2025`,
-        time: selectedTime
-      });
+      try {
+        // Format the date properly
+        const monthName = currentDate.toLocaleString('default', { month: 'long' });
+        const year = currentDate.getFullYear();
+        const formattedDate = `${selectedDate} ${monthName} ${year}`;
+        
+        // Save booking details to AsyncStorage
+        const bookingData = {
+          ...serviceData,
+          bookingDate: formattedDate,
+          bookingTime: selectedTime,
+          bookingDateRaw: `${year}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`,
+          bookingTimeRaw: selectedTime,
+        };
+        
+        await AsyncStorage.setItem('booking_draft', JSON.stringify(bookingData));
+        
+        // Navigate to ReviewPage with booking details
+        navigation.navigate('ReviewPage', {
+          serviceData: serviceData,
+          date: formattedDate,
+          time: selectedTime,
+          dateRaw: bookingData.bookingDateRaw,
+        });
+      } catch (error) {
+        console.error('Error saving booking details:', error);
+        Alert.alert('Error', 'Failed to proceed with booking. Please try again.');
+      }
+    } else {
+      Alert.alert('Incomplete Selection', 'Please select both date and time slot.');
     }
   };
 
@@ -82,27 +154,39 @@ export default function BookSlot({ navigation }) {
   };
 
   const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  
-  // Available time slots
-  const timeSlots = [
-    '10:30AM',
-    '11:30AM',
-    '2:00PM',
-    '3:30PM',
-    '4:30PM',
-    '6:00PM'
-  ];
 
   // Function to check if date is available (customize as needed)
   const isDateAvailable = (date) => {
-    const availableDates = [5, 9, 10, 11, 25, 26];
-    return availableDates.includes(date);
+    if (!date) return false;
+    
+    const today = new Date();
+    const selectedDateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
+    
+    // Don't allow past dates
+    if (selectedDateObj < today.setHours(0, 0, 0, 0)) {
+      return false;
+    }
+    
+    // Don't allow Sundays (day 0)
+    if (selectedDateObj.getDay() === 0) {
+      return false;
+    }
+    
+    // All other future dates are available
+    return true;
   };
 
   // Handle date selection
   const handleDateSelect = (date) => {
     if (date && isDateAvailable(date)) {
       setSelectedDate(date);
+    } else if (date && !isDateAvailable(date)) {
+      const selectedDateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
+      if (selectedDateObj < new Date().setHours(0, 0, 0, 0)) {
+        Alert.alert('Invalid Date', 'Please select a future date.');
+      } else if (selectedDateObj.getDay() === 0) {
+        Alert.alert('Closed', 'Service not available on Sundays.');
+      }
     }
   };
 
@@ -111,54 +195,67 @@ export default function BookSlot({ navigation }) {
     setSelectedTime(time);
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center" edges={['top']}>
+        <ActivityIndicator size="large" color="#DC2626" />
+        <Text className="mt-4 text-gray-500 font-dm">Loading booking slots...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" style={styles.icon} />
+      <View className="flex-row items-center mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
+        <Text className="ml-4 text-xl font-semibold font-['DM']">Book Appointment</Text>
       </View>
 
-      <View style={styles.calendarContainer}>
-        <View style={styles.monthSelector}>
-          <TouchableOpacity onPress={handlePreviousMonth}>
-            <Ionicons name="chevron-back" style={styles.dropdownIcon} />
-          </TouchableOpacity>
-          <Text style={styles.monthText}>{formatMonthYear(currentDate)}</Text>
-          <TouchableOpacity onPress={handleNextMonth}>
-            <Ionicons name="chevron-forward" style={styles.dropdownIcon} />
-          </TouchableOpacity>
+      <View className="p-5 bg-white border border-[#E8E8E8] rounded-2xl mb-5">
+        <View className="flex-row justify-between items-center mb-5">
+          <Text className="text-lg font-bold text-gray-900 font-dm">{formatMonthYear(currentDate)}</Text>
+          <View className="flex-row gap-2">
+            <TouchableOpacity 
+              onPress={handlePreviousMonth}
+              className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
+            >
+              <Ionicons name="chevron-back" size={18} color="#374151" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleNextMonth}
+              className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
+            >
+              <Ionicons name="chevron-forward" size={18} color="#374151" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.daysRow}>
+        <View className="flex-row justify-around mb-3">
           {daysOfWeek.map((day, index) => (
-            <Text key={index} style={styles.dayLabel}>
-              {day}
+            <Text key={index} className="text-xs text-gray-500 font-semibold font-dm w-10 text-center">
+              {day.charAt(0)}
             </Text>
           ))}
         </View>
 
-        <View style={styles.calendarGrid}>
+        <View className="rounded-xl">
           {getCalendarDates().map((week, weekIndex) => (
-            <View key={weekIndex} style={styles.weekRow}>
+            <View key={weekIndex} className="flex-row justify-around">
               {week.map((date, dateIndex) => (
                 <TouchableOpacity
                   key={dateIndex}
                   onPress={() => handleDateSelect(date)}
-                  style={[
-                    styles.dateCell,
-                    date && isDateAvailable(date) && styles.availableDate,
-                    date && selectedDate === date && styles.selectedDate,
-                  ]}
+                  className={`w-10 h-10 justify-center items-center my-1 ${date && selectedDate === date ? 'bg-red-600 rounded-full' : ''}`}
                   disabled={!date}
                 >
                   <Text
-                    style={[
-                      date && styles.dateText,
-                      date && isDateAvailable(date) && styles.availableDateText,
-                      date && selectedDate === date && styles.selectedDateText,
-                    ]}
+                    className={`text-sm font-dm ${!date ? '' : date && isDateAvailable(date) ? 'text-gray-900 font-semibold' : 'text-gray-300'} ${date && selectedDate === date ? 'text-white font-bold' : ''}`}
                   >
                     {date || ''}
                   </Text>
@@ -169,196 +266,50 @@ export default function BookSlot({ navigation }) {
         </View>
       </View>
 
-      <View style={styles.timeSlotsContainer}>
-        <Text style={styles.sectionTitle}>Available Time Slots:</Text>
-        <View style={styles.timeGrid}>
-          {timeSlots.map((time, index) => (
+      {/* Service Info */}
+      {serviceData && (
+        <View className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl">
+          <Text className="text-xs text-[#999] font-['DM'] uppercase mb-1">Booking for</Text>
+          <Text className="text-lg font-semibold font-['DM'] text-gray-900">{serviceData.serviceName || 'Service'}</Text>
+          {serviceData.vendorName && (
+            <Text className="text-sm text-[#666] font-['DM'] mt-1">Provider: {serviceData.vendorName}</Text>
+          )}
+        </View>
+      )}
+
+      <View className="px-1">
+        <Text className="text-base font-semibold font-['DM'] mb-3 text-gray-900">Available Time Slots</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {availableSlots.map((time, index) => (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.timeSlot,
-                selectedTime === time && styles.selectedTimeSlot,
-              ]}
+              className={`px-5 py-3 rounded-full border ${selectedTime === time ? 'bg-red-600 border-red-600' : 'bg-white border-[#E8E8E8]'}`}
               onPress={() => handleTimeSelect(time)}
             >
               <Text
-                style={[
-                  styles.timeText,
-                  selectedTime === time && styles.selectedTimeText,
-                ]}
+                className={`text-sm font-medium font-['DM'] ${selectedTime === time ? 'text-white' : 'text-gray-700'}`}
               >
                 {time}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
+        
+        {selectedDate && !selectedTime && (
+          <Text className="text-sm text-red-500 mt-3 font-['DM']">⚠️ Please select a time slot</Text>
+        )}
       </View>
 
+      <View className="flex-1" />
+
       <TouchableOpacity
-        style={[
-          styles.bookButton,
-          selectedDate && selectedTime && styles.bookButtonActive,
-        ]}
+        className={`mx-4 mb-4 py-4 rounded-full items-center ${selectedDate && selectedTime ? 'bg-red-600' : 'bg-gray-300'}`}
         disabled={!selectedDate || !selectedTime}
         onPress={handleProceed}
       >
-        <Text style={styles.bookButtonText}>Book Slot</Text>
+        <Text className="text-white text-base font-semibold font-['DM']">Continue to Review</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: '75%',
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  backButton: {
-    padding: 8,
-  },
-  calendarContainer: {
-    padding: 16,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 24,
-  },
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  monthText: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  dayLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    width: 40,
-    textAlign: 'center',
-  },
-  calendarGrid: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  dateCell: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 2,
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  availableDateText: {
-    color: '#40A69F',
-  },
-  selectedDate: {
-    backgroundColor: '#4E46B4',
-    borderRadius: 20,
-  },
-  selectedDateText: {
-    color: '#fff',
-  },
-  timeSlotsContainer: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: '#0000008F',
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginBottom: 16,
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  timeSlot: {
-    marginBottom:10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  selectedTimeSlot: {
-    backgroundColor: '#4E46B4',
-    borderColor: '#E2E2E2',
-  },
-  timeText: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  selectedTimeText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  bookButton: {
-    marginTop:100,
-    margin: 16,
-    padding: 16,
-    borderRadius: 70,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-  },
-  bookButtonActive: {
-    backgroundColor: '#4E46B4',
-  },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    fontFamily: 'DM',
-  },
-  dropdownIcon: {
-    width:20,
-    height: 30,
-    fontSize: 18,
-    lineHeight:26,
-    color: "#4E46B4",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "#4E46B4",
-    borderWidth: 1.5,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-});
 

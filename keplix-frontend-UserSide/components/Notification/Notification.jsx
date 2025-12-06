@@ -1,331 +1,293 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   StatusBar,
   Switch,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationsAPI } from '../../services/api';
 
 export default function Notification({ navigation }) {
-  const [customAlertsEnabled, setCustomAlertsEnabled] = React.useState(false);
-  const [emailAlertsEnabled, setEmailAlertsEnabled] = React.useState(false);
-  const [smsAlertsEnabled, setSmsAlertsEnabled] = React.useState(false);
-  const [showDropdown, setShowDropdown] = React.useState(false);
-  const [selectedOption, setSelectedOption] = React.useState('An Hour Before');
-  const [dropdownExpanded, setDropdownExpanded] = React.useState(false);
+  const [customAlertsEnabled, setCustomAlertsEnabled] = useState(false);
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(false);
+  const [smsAlertsEnabled, setSmsAlertsEnabled] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedOption, setSelectedOption] = useState('An Hour Before');
+  const [dropdownExpanded, setDropdownExpanded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      setLoading(true);
+      const userData = await AsyncStorage.getItem('user_data');
+      if (userData) {
+        const user = JSON.parse(userData);
+        const id = user.id || user.user_id;
+        setUserId(id);
+
+        // Load saved preferences from AsyncStorage
+        const savedSettings = await AsyncStorage.getItem('notification_settings');
+        if (savedSettings) {
+          const settings = JSON.parse(savedSettings);
+          setCustomAlertsEnabled(settings.customAlerts || false);
+          setEmailAlertsEnabled(settings.emailAlerts || false);
+          setSmsAlertsEnabled(settings.smsAlerts || false);
+          setSelectedOption(settings.alertTiming || 'An Hour Before');
+          setShowDropdown(settings.customAlerts || false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleCustomAlerts = () => {
     const newState = !customAlertsEnabled;
     setCustomAlertsEnabled(newState);
     setShowDropdown(newState);
+    setHasChanges(true);
   };
   
-  const toggleEmailAlerts = () => setEmailAlertsEnabled(previousState => !previousState);
-  const toggleSmsAlerts = () => setSmsAlertsEnabled(previousState => !previousState);
+  const toggleEmailAlerts = () => {
+    setEmailAlertsEnabled(previousState => !previousState);
+    setHasChanges(true);
+  };
+
+  const toggleSmsAlerts = () => {
+    setSmsAlertsEnabled(previousState => !previousState);
+    setHasChanges(true);
+  };
   
   const toggleDropdown = () => setDropdownExpanded(!dropdownExpanded);
   
   const selectOption = (option) => {
     setSelectedOption(option);
     setDropdownExpanded(false);
+    setHasChanges(true);
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+      
+      const settings = {
+        customAlerts: customAlertsEnabled,
+        emailAlerts: emailAlertsEnabled,
+        smsAlerts: smsAlertsEnabled,
+        alertTiming: selectedOption,
+      };
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('notification_settings', JSON.stringify(settings));
+      
+      Alert.alert(
+        'Success',
+        'Notification settings saved successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setHasChanges(false);
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      Alert.alert('Error', 'Failed to save notification settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Check if any switch is enabled to determine save button color
-  const isSaveEnabled = customAlertsEnabled || emailAlertsEnabled || smsAlertsEnabled;
+  const isSaveEnabled = hasChanges && (customAlertsEnabled || emailAlertsEnabled || smsAlertsEnabled);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center" edges={['top']}>
+        <ActivityIndicator size="large" color="#DC2626" />
+        <Text className="text-gray-500 mt-2 font-dm">Loading settings...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" style={styles.icon} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('HamburgerMenu')}>
-          <Ionicons name="menu-outline" style={styles.icon} />
+      <View className="flex-row items-center justify-between mb-5">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.settingsContainer} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.headerText}>Notifications settings</Text>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 10 }}>
+        <Text className="text-2xl font-semibold font-dm text-gray-900 mb-6">Notification Settings</Text>
 
-        <View style={styles.settingContainer}>
-          <View style={styles.iconContainer}>
-            <Feather name="alert-circle" size={30} color="black" />
+        <View className="bg-white border border-[#E8E8E8] rounded-2xl p-4 mb-3">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+                <Feather name="alert-circle" size={24} color="#DC2626" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold font-dm text-gray-900">Custom Alerts</Text>
+                <Text className="text-xs font-dm text-gray-500 mt-1">Set up custom alerts for bookings</Text>
+              </View>
+            </View>
+            <Switch
+              trackColor={{ false: '#E8E8E8', true: '#DC2626' }}
+              thumbColor={'#ffffff'}
+              ios_backgroundColor="#E8E8E8"
+              onValueChange={toggleCustomAlerts}
+              value={customAlertsEnabled}
+            />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.settingTitle}>Custom Alerts</Text>
-            <Text style={styles.settingDescription}>Set up custom alerts for bookings</Text>
-          </View>
-          <Switch
-            trackColor={{ false: '#e0e0e0', true: '#4E46B4' }}
-            thumbColor={customAlertsEnabled ? '#ffffff' : '#ffffff'}
-            ios_backgroundColor="#e0e0e0"
-            onValueChange={toggleCustomAlerts}
-            value={customAlertsEnabled}
-            style={styles.switch}
-          />
         </View>
 
         {showDropdown && (
-          <View style={styles.dropdownContainer}>
+          <View className="mb-4">
             <TouchableOpacity 
-              style={styles.selectedOption}
+              className="flex-row items-center bg-[#EEEEEE] rounded-[25px] p-4 mt-1 mb-1"
               onPress={toggleDropdown}
             >
-              <View style={styles.timeIconContainer}>
+              <View className="w-7 items-center justify-center">
                 <Ionicons name="time-outline" size={24} color="black" />
               </View>
-              <Text style={styles.optionText}>{selectedOption}</Text>
+              <Text className="text-base font-semibold font-dm flex-1 text-[#666]">{selectedOption}</Text>
               <Ionicons 
                 name={dropdownExpanded ? "chevron-up" : "chevron-down"} 
                 size={24} 
                 color="black" 
-                style={styles.dropdownIcon}
+                className="mr-1"
               />
             </TouchableOpacity>
 
             {dropdownExpanded && (
-              <View style={styles.optionsContainer}>
+              <View className="bg-white rounded-[25px] border border-[#EEEEEE] mt-1 overflow-hidden">
                 <TouchableOpacity 
-                  style={styles.option}
+                  className="flex-row items-center p-4"
                   onPress={() => selectOption('An Hour Before')}
                 >
-                  <View style={styles.timeIconContainer}>
+                  <View className="w-7 items-center justify-center">
                     <Ionicons name="time-outline" size={24} color="black" />
                   </View>
-                  <Text style={styles.optionText}>An Hour Before</Text>
+                  <Text className="text-base font-semibold font-dm flex-1 text-[#666]">An Hour Before</Text>
                 </TouchableOpacity>
-                <View style={styles.divider} />
+                <View className="h-[1px] bg-[#E0E0E0] ml-[50px]" />
                 
                 <TouchableOpacity 
-                  style={styles.option}
+                  className="flex-row items-center p-4"
                   onPress={() => selectOption('A Day Before')}
                 >
-                  <View style={styles.timeIconContainer}>
+                  <View className="w-7 items-center justify-center">
                     <Ionicons name="time-outline" size={24} color="black" />
                   </View>
-                  <Text style={styles.optionText}>A Day Before</Text>
+                  <Text className="text-base font-semibold font-dm flex-1 text-[#666]">A Day Before</Text>
                 </TouchableOpacity>
-                <View style={styles.divider} />
+                <View className="h-[1px] bg-[#E0E0E0] ml-[50px]" />
                 
                 <TouchableOpacity 
-                  style={styles.option}
+                  className="flex-row items-center p-4"
                   onPress={() => selectOption('3 Hours Before')}
                 >
-                  <View style={styles.timeIconContainer}>
+                  <View className="w-7 items-center justify-center">
                     <Ionicons name="time-outline" size={24} color="black" />
                   </View>
-                  <Text style={styles.optionText}>3 Hours Before</Text>
+                  <Text className="text-base font-semibold font-dm flex-1 text-[#666]">3 Hours Before</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
         )}
 
-        <View style={styles.settingContainer}>
-          <View style={styles.iconContainer}>
+        <View className="flex-row items-center py-4 border-b border-[#e0e0e0]">
+          <View className="w-10 items-center justify-center">
             <MaterialIcons name="email" size={30} color="black" />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.settingTitle}>Email Alerts</Text>
-            <Text style={styles.settingDescription}>Receive notifications via email?</Text>
+          <View className="flex-1 ml-2.5">
+            <Text className="text-xl font-medium font-dm text-black">Email Alerts</Text>
+            <Text className="text-sm font-medium font-dm text-[#777] mt-0.5">Receive notifications via email?</Text>
             {emailAlertsEnabled && (
-              <Text style={styles.statusText}>Email alerts turned on</Text>
+              <Text className="text-xs font-medium font-dm text-[#DC2626] mt-1">Email alerts turned on</Text>
             )}
           </View>
           <Switch
-            trackColor={{ false: '#e0e0e0', true: '#4E46B4' }}
+            trackColor={{ false: '#e0e0e0', true: '#DC2626' }}
             thumbColor={emailAlertsEnabled ? '#ffffff' : '#ffffff'}
             ios_backgroundColor="#e0e0e0"
             onValueChange={toggleEmailAlerts}
             value={emailAlertsEnabled}
-            style={styles.switch}
+            style={{ transform: [{ scaleX: 1.6 }, { scaleY: 1.6 }], marginRight: 10 }}
           />
         </View>
 
-        <View style={styles.settingContainer}>
-          <View style={styles.iconContainer}>
+        <View className="flex-row items-center py-4 border-b border-[#e0e0e0]">
+          <View className="w-10 items-center justify-center">
             <MaterialIcons name="chat-bubble" size={30} color="black" />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.settingTitle}>SMS Alerts</Text>
-            <Text style={styles.settingDescription}>Receive notifications via SMS?</Text>
+          <View className="flex-1 ml-2.5">
+            <Text className="text-xl font-medium font-dm text-black">SMS Alerts</Text>
+            <Text className="text-sm font-medium font-dm text-[#777] mt-0.5">Receive notifications via SMS?</Text>
             {smsAlertsEnabled && (
-              <Text style={styles.statusText}>SMS alerts turned on</Text>
+              <Text className="text-xs font-medium font-dm text-[#DC2626] mt-1">SMS alerts turned on</Text>
             )}
           </View>
           <Switch
-            trackColor={{ false: '#e0e0e0', true: '#4E46B4' }}
+            trackColor={{ false: '#e0e0e0', true: '#DC2626' }}
             thumbColor={smsAlertsEnabled ? '#ffffff' : '#ffffff'}
             ios_backgroundColor="#e0e0e0"
             onValueChange={toggleSmsAlerts}
             value={smsAlertsEnabled}
-            style={styles.switch}
+            style={{ transform: [{ scaleX: 1.6 }, { scaleY: 1.6 }], marginRight: 10 }}
           />
         </View>
 
       </ScrollView>
 
-     <View style={styles.buttonContainer}>
+     <View className="p-4 pb-6 bg-white">
         <TouchableOpacity 
-          style={[
-            styles.saveButton, 
-            isSaveEnabled ? styles.saveButtonEnabled : styles.saveButtonDisabled
-          ]}
-          onPress={() => isSaveEnabled && navigation.navigate('Profile')}
-          disabled={!isSaveEnabled}
+          className={`rounded-full p-4 items-center mt-7 ${
+            isSaveEnabled ? 'bg-[#DC2626]' : 'bg-[#0000008F]'
+          }`}
+          onPress={saveSettings}
+          disabled={!isSaveEnabled || saving}
         >
-          <Text style={styles.saveButtonText}>Save Settings</Text>
+          {saving ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white text-lg font-semibold font-dm">Save Settings</Text>
+          )}
         </TouchableOpacity>
+        
+        {hasChanges && !isSaveEnabled && (
+          <Text className="text-center text-gray-500 text-sm font-dm mt-2">
+            Enable at least one notification type to save
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: '75%',
-  },
-  icon: {
-    fontSize: 30,
-    borderColor: '#E2E2E2',
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  settingsContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 10,
-  },
-  buttonContainer: {
-    padding: 15,
-    paddingBottom: 25,
-    backgroundColor: '#fff',
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: '500',
-    fontFamily: "DM",
-    color: '#0000008F',
-    marginBottom: 24,
-  },
-  settingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  iconContainer: {
-    width: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeIconContainer: {
-    width: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textContainer: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  settingTitle: {
-    fontSize: 20,
-    fontWeight: '500',
-    fontFamily: "DM",
-    color: 'black',
-  },
-  settingDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: "DM",
-    color: '#777',
-    marginTop: 2,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: "DM",
-    color: '#4E46B4',
-    marginTop: 4,
-  },
-  switch: {
-    transform: [{ scaleX: 1.6 }, { scaleY: 1.6 }],
-    marginRight: 10,
-  },
-  dropdownContainer: {
-    marginBottom: 16,
-  },
-  selectedOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEEEEE',
-    borderRadius: 25,
-    padding: 15,
-    marginTop: 5,
-    marginBottom: 5,
-  },
-  optionsContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-    marginTop: 5,
-    overflow: 'hidden',
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-  },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: "DM",
-    flex: 1,
-    color: '#666',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginLeft: 50,
-  },
-  dropdownIcon: {
-    marginRight: 5,
-  },
-  saveButton: {
-    borderRadius: 70,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  saveButtonEnabled: {
-    backgroundColor: '#4E46B4',
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#0000008F',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: "DM",
-  },
-});

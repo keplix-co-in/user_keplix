@@ -1,21 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   TextInput,
   ScrollView,
   Image
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 
-export default function Payment4({ navigation }) {
+export default function Payment4({ navigation, route }) {
   const [upiId, setUpiId] = useState("");
   const [isUpiValid, setIsUpiValid] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [amount, setAmount] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
+
+  useEffect(() => {
+    // Get payment info from route params
+    const { amount: paymentAmount, bookingId: booking, service } = route?.params || {};
+    setAmount(paymentAmount || 0);
+    setBookingId(booking);
+    setServiceData(service);
+  }, [route?.params]);
 
   const upiDatabase = {
     GooglePay: "googlepay@upi",
@@ -58,274 +68,126 @@ export default function Payment4({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+        <View className="flex-row items-center justify-between px-5 mb-5">
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+          >
+            <Ionicons name="arrow-back-outline" size={24} color="#000" />
           </TouchableOpacity>
+          <Text className="text-2xl font-bold text-gray-900 font-dm">Payment</Text>
+          <View className="w-10" />
         </View>
 
-        <Text style={styles.title}>Payment</Text>
-        <Text style={styles.subtitle}>Select payment method</Text>
+        <Text className="text-sm text-gray-500 mb-6 font-dm px-5">Choose your UPI app or enter UPI ID</Text>
 
-        <View style={styles.cardContainer}>
-          <TouchableOpacity style={styles.menuItem}>
-            <FontAwesome5 name="rupee-sign" size={24} color="#000" style={styles.menuIcon} />
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>UPI</Text>
+        <View className="flex-1 p-5 mx-5 border border-[#E8E8E8] rounded-2xl bg-white">
+          <View className="flex-row items-center mb-5">
+            <View className="w-12 h-12 bg-red-50 rounded-xl items-center justify-center mr-3">
+              <FontAwesome5 name="rupee-sign" size={24} color="#DC2626" />
             </View>
-          </TouchableOpacity>
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-gray-900 font-dm">UPI Payment</Text>
+            </View>
+          </View>
 
-          <Text style={styles.chooseAppText}>Choose App</Text>
+          <Text className="text-sm text-gray-700 font-semibold font-dm mb-3">Choose App</Text>
 
-          <View style={styles.appRow}>
+          <View className="flex-row justify-between mb-5">
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-1 border border-[#E8E8E8] rounded-xl p-3 bg-gray-50"
               onPress={() => handleAppClick("GooglePay")}
             >
               <Image
                 source={require("../../assets/images/icons8-google-pay-48.png")}
-                style={styles.appImage}
+                className="h-12 w-12"
+                style={{resizeMode: 'contain'}}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-1 border border-[#E8E8E8] rounded-xl p-3 bg-gray-50"
               onPress={() => handleAppClick("Paytm")}
             >
               <Image
                 source={require("../../assets/images/icons8-paytm-48.png")}
-                style={styles.appImage}
+                className="h-12 w-12"
+                style={{resizeMode: 'contain'}}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-1 border border-[#E8E8E8] rounded-xl p-3 bg-gray-50"
               onPress={() => handleAppClick("PhonePe")}
             >
               <Image
                 source={require("../../assets/images/phonepe-icon.png")}
-                style={styles.appImage}
+                className="h-12 w-12"
+                style={{resizeMode: 'contain'}}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.appIcon, styles.iconBorder]}
+              className="flex-1 items-center mx-1 border border-[#E8E8E8] rounded-xl p-3 bg-gray-50"
               onPress={() => handleAppClick("Amazon")}
             >
               <Image
                 source={require("../../assets/images/icons8-amazon-48.png")}
-                style={styles.appImage}
+                className="h-12 w-12"
+                style={{resizeMode: 'contain'}}
               />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>Or</Text>
-            <View style={styles.line} />
+          <View className="flex-row items-center my-4">
+            <View className="flex-1 h-[1px] bg-gray-300" />
+            <Text className="mx-3 text-sm text-gray-500 font-semibold font-dm">Or</Text>
+            <View className="flex-1 h-[1px] bg-gray-300" />
           </View>
 
-          <Text style={styles.chooseAppText}>Enter UPI ID</Text>
-          <View style={styles.menuItem}>
+          <Text className="text-sm text-gray-700 font-semibold font-dm mb-2">Enter UPI ID</Text>
+          <View className="flex-row items-center mb-5 gap-2">
             <TextInput
-              style={styles.input}
-              placeholder="Enter UPI ID"
+              className="flex-1 border border-[#E8E8E8] rounded-xl px-4 py-3 text-sm font-dm bg-gray-50"
+              placeholder="yourname@upi"
+              placeholderTextColor="#9CA3AF"
               value={upiId}
               onChangeText={handleUpiInputChange}
             />
 
             <TouchableOpacity
-              style={[
-                styles.verifyButton,
-                {
-                  backgroundColor: isUpiValid
-                    ? isVerified
-                      ? "#fff"
-                      : "#40A69F"
-                    : "#0000008F"
-                }
-              ]}
+              className={`px-5 py-3 rounded-xl items-center ${isVerified ? 'bg-green-50 border border-green-200' : isUpiValid ? 'bg-teal-500' : 'bg-gray-300'}`}
               onPress={handleVerify}
               disabled={!isUpiValid}
             >
               <Text
-                style={[
-                  styles.verifyButtonText,
-                  isVerified && { color: "#40A69F" },
-                ]}
+                className={`text-sm font-bold font-dm ${isVerified ? 'text-green-600' : 'text-white'}`}
               >
-                {isVerified ? "Verified" : "Verify"}
+                {isVerified ? "✓ Verified" : "Verify"}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        <View className="flex-1" />
+
         <TouchableOpacity
-          style={[
-            styles.payButton,
-            isVerified ? { backgroundColor: "#4E46B4" } : { backgroundColor: "#0000008F" },
-          ]}
+          className={`py-4 rounded-full items-center mx-5 mb-5 ${isVerified ? 'bg-red-600' : 'bg-gray-300'}`}
           onPress={() => {
             if (isVerified) {
-              navigation.navigate("PaymentSuccess");
+              navigation.navigate("PaymentSuccess", {
+                amount,
+                bookingId,
+                service: serviceData,
+                paymentMethod: 'upi',
+                transactionId: `UPI${Date.now()}`,
+              });
             }
           }}
           disabled={!isVerified}
         >
-          <Text style={styles.payButtonText}>Pay ₹10,499</Text>
+          <Text className="text-white text-base font-bold font-dm">Pay ₹{amount.toLocaleString()}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 20,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 24,
-    fontFamily: 'DM',
-    marginLeft: 23,
-  },
-  cardContainer: {
-    flex: 1,
-    padding: 20,
-    marginHorizontal: 15,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuText: {
-    fontSize: 24,
-    fontWeight: "500",
-    color: "#1E1E1E",
-    fontFamily: "DM",
-  },
-  menusubText: {
-    fontSize: 12,
-    color: "rgba(0, 0, 0, 0.56)",
-    fontWeight: "500",
-    fontFamily: "DM",
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 15,
-  },
-  chooseAppText: {
-    fontSize: 12,
-    color: "#000",
-    fontWeight: "500",
-    fontFamily: "DM",
-    marginBottom: 10,
-  },
-  appRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 20,
-  },
-  appIcon: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
-  appImage: {
-    height: 44,
-    width: 44,
-    resizeMode: 'contain',
-  },
-  iconBorder: {
-    borderWidth: 2,
-    borderColor: '#E2E2E2',
-    borderRadius: 8,
-    padding: 10,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-    marginHorizontal: 10,
-    width: '95%',
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  orText: {
-    marginHorizontal: 10,
-    color: '#0000008F',
-    fontWeight: '600',
-    fontFamily: 'DM',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#E2E2E2",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    width: '75%',
-    marginHorizontal: 5,
-  },
-  verifyButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  verifyButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'DM',
-  },
-  payButton: {
-    padding: 15,
-    borderRadius: 70,
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginTop: 180,
-  },
-  payButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: 'DM',
-  },
-});

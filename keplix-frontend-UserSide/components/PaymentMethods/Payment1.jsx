@@ -1,11 +1,11 @@
-import React, { useState } from "react"; 
+import React, { useState, useEffect } from "react"; 
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Fontisto from "react-native-vector-icons/Fontisto";
@@ -13,161 +13,102 @@ import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
-export default function Payment1({ navigation }) {
+export default function Payment1({ navigation, route }) {
+  const [amount, setAmount] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
+
+  useEffect(() => {
+    // Get amount and booking info from route params
+    const bookingData = route?.params?.booking;
+    const service = route?.params?.service;
+    const paymentAmount = route?.params?.amount || bookingData?.total_price || service?.price || 0;
+    
+    setAmount(paymentAmount);
+    setBookingId(bookingData?.id);
+    setServiceData(service || bookingData?.service);
+  }, [route?.params]);
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} style={styles.icon} />
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <View className="flex-row items-center px-5 pt-5 pb-4">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+        >
+          <Ionicons name="arrow-back-outline" size={24} color="#000" />
+        </TouchableOpacity>
+        <View className="flex-1 items-center pr-10">
+          <Text className="text-2xl font-semibold text-gray-900 font-dm">Payment</Text>
+        </View>
+      </View>
+
+      <Text className="text-base text-gray-500 mb-6 font-dm px-5">Select payment method</Text>
+
+      <View className="flex-1 px-4">
+        <TouchableOpacity 
+          className="flex-row items-center justify-between p-5 border border-[#E8E8E8] rounded-2xl mb-4 bg-white"
+          onPress={() => navigation.navigate("Payment2", { amount, bookingId, service: serviceData })}
+        >
+          <View className="flex-row items-center flex-1 gap-4">
+            <View className="w-12 h-12 bg-gray-100 rounded-xl items-center justify-center">
+              <Fontisto name="credit-card" size={20} color="#374151" />
+            </View>
+            <Text className="text-lg font-semibold text-gray-900 font-dm">Debit / Credit Card</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          className="flex-row items-center justify-between p-5 border border-[#E8E8E8] rounded-2xl mb-4 bg-white"
+          onPress={() => navigation.navigate("Payment5", { amount, bookingId, service: serviceData })}
+        >
+          <View className="flex-row items-center flex-1 gap-4">
+            <View className="w-12 h-12 bg-gray-100 rounded-xl items-center justify-center">
+              <FontAwesome name="bank" size={20} color="#374151" />
+            </View>
+            <Text className="text-lg font-semibold text-gray-900 font-dm">Net Banking</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          className="flex-row items-center justify-between p-5 border border-[#E8E8E8] rounded-2xl mb-4 bg-white"
+          onPress={() => navigation.navigate("Payment4", { amount, bookingId, service: serviceData })}
+        >
+          <View className="flex-row items-center flex-1 gap-4">
+            <View className="w-12 h-12 bg-gray-100 rounded-xl items-center justify-center">
+              <FontAwesome5 name="rupee-sign" size={22} color="#374151" />
+            </View>
+            <Text className="text-lg font-semibold text-gray-900 font-dm">UPI</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          className="flex-row items-center justify-between p-5 border border-[#E8E8E8] rounded-2xl mb-4 bg-white"
+          onPress={() => navigation.navigate("PaymentSuccess", { 
+            amount, 
+            bookingId, 
+            service: serviceData,
+            paymentMethod: 'cash'
+          })}
+        >
+          <View className="flex-row items-center flex-1 gap-4">
+            <View className="w-12 h-12 bg-gray-100 rounded-xl items-center justify-center">
+              <MaterialCommunityIcons name="cash" size={28} color="#374151" />
+            </View>
+            <Text className="text-lg font-semibold text-gray-900 font-dm">Cash on Delivery</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Payment</Text>
-      <Text style={styles.subtitle}> Select payment method</Text>
-
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuItem}>
-          <Fontisto name="credit-card" size={20} color="#000" style={styles.menuIcon} />
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>Debit / Credit Card</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("Payment2")}>
-            <MaterialIcons name="keyboard-arrow-right" style={styles.dropdownIcon} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Payment5")}>
-          <FontAwesome name="bank" size={25} color="#000" style={styles.menuIcon} />
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>Net Banking</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("Payment5")}>
-            <MaterialIcons name="keyboard-arrow-right" style={styles.dropdownIcon} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Payment4")}>
-          <FontAwesome5 name="rupee-sign" size={30} color="#000" style={styles.menuIcon} />
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>UPI</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("Payment4")}>
-            <MaterialIcons name="keyboard-arrow-right" style={styles.dropdownIcon} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("PaymentSuccess")}>
-          <MaterialCommunityIcons name="cash" size={40} color="#000" style={styles.menuIcon} />
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuText}>Cash on Delivery</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("PaymentSuccess")}>
-            <MaterialIcons name="keyboard-arrow-right" style={styles.dropdownIcon} />
-          </TouchableOpacity>
-        </TouchableOpacity>
+      <View className="bg-white px-5 py-4 border-t border-gray-100">
+        <View className="mb-3">
+          <Text className="text-gray-500 text-sm font-dm text-center">Total Amount</Text>
+          <Text className="text-2xl font-bold text-gray-900 font-dm text-center mt-1">₹{amount.toLocaleString()}</Text>
+        </View>
       </View>
-
-      <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("Payment1")}>
-        <Text style={styles.addButtonText}>Pay ₹10,499</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    padding: 20,
-  },
-  icon: {
-    fontSize: 24,
-    borderColor: "#E2E2E2",
-    borderWidth: 2,
-    borderRadius: 50,
-    padding: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-    fontWeight: '500',
-    fontFamily: 'DM',
-    marginLeft: 20,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 24,
-    fontFamily: 'DM',
-    marginLeft: 23,
-  },
-  menuContainer: {
-    flex: 1,    
-  },
-  menuItem: {
-    flexDirection: "row", 
-    alignItems: "center", 
-    justifyContent: "space-between", 
-    paddingVertical: 15, 
-    paddingHorizontal: 15,
-    width:"92%",
-    marginLeft:15, 
-    borderColor: "#E2E2E2", 
-    borderWidth: 2, 
-    borderRadius: 16, 
-    marginBottom: 20, 
-    backgroundColor: "#fff", 
-  },
-  menuIcon: {
-    marginRight: 10,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuText: {
-    fontSize: 20, 
-    fontWeight: "500", 
-    color: "#1E1E1E",
-    fontFamily: "DM", 
-  },
-  menusubText: {
-    fontSize: 12,
-    color: "rgba(0, 0, 0, 0.56)", 
-    fontWeight: "500",
-    fontFamily: "DM", 
-  },
-  dropdownIcon: {
-    width: 20,
-    height: 30,
-    fontSize: 18,
-    lineHeight: 26,
-    color: "rgba(0, 0, 0, 0.56)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderColor: "rgba(0, 0, 0, 0.56)",
-    borderWidth: 1.5,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-  addButton: {
-    backgroundColor: "#0000008F",
-    padding: 15,
-    borderRadius: 30,
-    alignItems: "center",
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    width: "90%",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: "DM", 
-  },
-});
