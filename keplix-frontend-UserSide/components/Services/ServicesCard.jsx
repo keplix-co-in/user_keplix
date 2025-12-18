@@ -14,7 +14,6 @@ import {
   Ionicons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import Footer from "../Footer/Footer";
 import {
   FontAwesome5,
 } from "@expo/vector-icons";
@@ -308,7 +307,6 @@ export default function ServicesCard({ navigation }) {
           targetScreen="Profile"
         />
       </View> */}
-      <Footer navigation={navigation} />
     </SafeAreaView>
   );
 }

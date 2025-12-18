@@ -5,7 +5,6 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api';
 import { tokenManager } from '../../services/tokenManager';
-import Footer from "../Footer/Footer";
 
 const SettingsItem = ({ icon, title, navigation, targetScreen }) => (
   <TouchableOpacity
@@ -284,7 +283,6 @@ export default function Profile({ navigation }) {
         </View>
         </View>
       </ScrollView>
-      <Footer navigation={navigation} />
     </SafeAreaView>
   );
 }

@@ -21,11 +21,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Backend URL - Configure in .env file
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Debug: Log the API URL being used
+console.log('🔗 API BASE_URL:', BASE_URL);
+console.log('📱 Environment:', process.env.EXPO_PUBLIC_API_URL);
+
 // Create axios instance
 const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',
+  },
+  validateStatus: function (status) {
+    // Accept all 2xx status codes as success
+    return status >= 200 && status < 300;
   },
 });
 
@@ -119,7 +128,10 @@ export const authAPI = {
     api.post('/accounts/auth/change-password/', { current_password: currentPassword, new_password: newPassword }),
   
   // Logout
-  logout: () => api.post('/accounts/auth/logout/'),
+  logout: async () => {
+    const refreshToken = await tokenManager.getRefreshToken();
+    return api.post('/accounts/auth/logout/', { refresh: refreshToken });
+  },
 };
 
 // ======================

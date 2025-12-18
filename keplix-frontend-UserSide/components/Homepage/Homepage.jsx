@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { FlatList, ActivityIndicator } from "react-native";
 import {
   View,
@@ -7,15 +7,79 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Ionicons,
   MaterialIcons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import Footer from "../Footer/Footer";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bookingsAPI, servicesAPI } from '../../services/api';
+import locationService from '../../services/locationService';
+
+// Memoized workshop card component
+const WorkshopCard = memo(({ imagePath, navigation }) => (
+  <TouchableOpacity
+    className="w-64 mr-3 bg-white border border-gray-200 rounded-2xl overflow-hidden"
+    onPress={() => navigation.navigate("ProviderDetails")}
+  >
+    <View className="relative">
+      <Image
+        source={imagePath}
+        className="w-full h-28"
+        resizeMode="cover"
+      />
+      <View className="absolute top-2 right-2 bg-red-600 px-2 py-1 rounded-full flex-row items-center">
+        <Ionicons name="pricetag" size={10} color="white" />
+        <Text className="text-white text-[10px] font-bold font-dm ml-1">Flat ₹100 off</Text>
+      </View>
+      <TouchableOpacity className="absolute top-2 left-2 w-7 h-7 bg-white/90 rounded-full items-center justify-center">
+        <Ionicons name="bookmark-outline" size={16} color="#DC2626" />
+      </TouchableOpacity>
+    </View>
+    <View className="p-2.5">
+      <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
+        Dwarka mor service
+      </Text>
+      <View className="flex-row items-center mt-1">
+        <Text className="text-xs text-gray-700 font-dm">4.0</Text>
+        <View className="flex-row ml-1">
+          {[1,2,3,4].map(i => (
+            <Ionicons key={i} name="star" size={10} color="#FFA500" />
+          ))}
+          <Ionicons name="star-outline" size={10} color="#FFA500" />
+        </View>
+        <Text className="text-xs text-gray-500 font-dm ml-1">(120)</Text>
+      </View>
+      <View className="flex-row items-center mt-1.5">
+        <Ionicons name="location" size={12} color="#666" />
+        <Text className="text-[10px] text-gray-600 font-dm ml-1" numberOfLines={1}>
+          7 km, Location address...
+        </Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+));
+
+WorkshopCard.displayName = 'WorkshopCard';
+
+// Memoized service item
+const FeaturedServiceItem = memo(({ item, onPress }) => (
+  <TouchableOpacity
+    className="items-center mb-4"
+    style={{ width: '23%' }}
+    onPress={onPress}
+  >
+    <View className="w-full aspect-square bg-white border border-gray-200 rounded-2xl items-center justify-center mb-1.5">
+      <MaterialCommunityIcons name={item.icon} size={32} color="#DC2626" />
+    </View>
+    <Text className="text-[9px] text-gray-700 text-center font-dm w-full" numberOfLines={2} style={{ lineHeight: 11 }}>
+      {item.label}
+    </Text>
+  </TouchableOpacity>
+));
+
+FeaturedServiceItem.displayName = 'FeaturedServiceItem';
 
 export default function Homepage({ navigation }) {
   const [activeDot, setActiveDot] = useState(0);
@@ -24,7 +88,12 @@ export default function Homepage({ navigation }) {
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [userId, setUserId] = useState(null);
-  const featuredServices = [
+  const [locationText, setLocationText] = useState('Set your location');
+  const [hasLocationPermission, setHasLocationPermission] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  // Memoize static data to prevent re-creation on every render
+  const featuredServices = useMemo(() => [
     { icon: "car-wrench", label: "Car Service & Repairs", route: "Service" },
     { icon: "spray-bottle", label: "Car cleaning", route: "Cleaning" },
     { icon: "spray", label: "Dents & Painting", route: "Dents" },
@@ -37,9 +106,9 @@ export default function Homepage({ navigation }) {
     { icon: "shield-car", label: "Car Insurance", route: "Insurance" },
     { icon: "car-light-high", label: "Windshield & Lights", route: "Windshield" },
     { icon: "engine", label: "Mechanical Repairs", route: "Mechanical" },
-  ];
+  ], []);
 
-  const banners = [
+  const banners = useMemo(() => [
     {
       color: "#F59E0B",
       iconBgColor: "#FCD34D",
@@ -52,7 +121,7 @@ export default function Homepage({ navigation }) {
       discountText: "15%",
       discountDescription: "discount on the first order.",
     },
-  ];
+  ], []);
 
   const currentBanner = banners[activeDot];
 
@@ -74,6 +143,41 @@ export default function Homepage({ navigation }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Load location data on mount and when screen focuses
+  useEffect(() => {
+    loadLocationData();
+    
+    // Add focus listener to reload location when returning to this screen
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('Homepage focused, reloading location');
+      // Force reload location data
+      setTimeout(() => {
+        loadLocationData();
+      }, 100);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadLocationData = async () => {
+    try {
+      console.log('Loading location data...');
+      const locationSummary = await locationService.getLocationSummary();
+      console.log('Location summary:', locationSummary);
+      setHasLocationPermission(locationSummary.hasPermission);
+      setLocationText(locationSummary.shortText || 'Set your location');
+    } catch (error) {
+      console.error('Error loading location:', error);
+      setLocationText('Set your location');
+    }
+  };
+
+  const handleLocationPress = () => {
+    console.log('Location button pressed, navigating to LocationPicker');
+    // Navigate to LocationPicker - location will be updated via focus listener on return
+    navigation.navigate('LocationPicker');
+  };
 
   const fetchUserData = async () => {
     try {
@@ -116,12 +220,13 @@ export default function Homepage({ navigation }) {
     }
   };
 
-  const formatDate = (dateString) => {
+  // Memoize formatting functions to prevent re-creation
+  const formatDate = useCallback((dateString) => {
     const date = new Date(dateString);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return 'Today';
     } else if (date.toDateString() === tomorrow.toDateString()) {
@@ -129,28 +234,32 @@ export default function Homepage({ navigation }) {
     } else {
       return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     }
-  };
+  }, []);
 
-  const formatTime = (timeString) => {
+  const formatTime = useCallback((timeString) => {
     const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
-  };
+  }, []);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: currentBanner.color }} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} className="bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: currentBanner.color }}>
+      <ScrollView showsVerticalScrollIndicator={false} className="bg-gray-50" contentContainerStyle={{ paddingTop: insets.top }}>
         {/* Header with Location and Banner */}
         <View style={{ backgroundColor: currentBanner.color }}>
           {/* Top Bar with Location */}
           <View className="px-4 pt-2 pb-2 flex-row justify-between items-center">
-            <TouchableOpacity className="flex-row items-center bg-white/20 px-3 py-1.5 rounded-full flex-1 mr-3">
+            <TouchableOpacity 
+              className="flex-row items-center bg-white/20 px-3 py-1.5 rounded-full flex-1 mr-3"
+              onPress={handleLocationPress}
+              activeOpacity={0.7}
+            >
               <Ionicons name="location-sharp" size={14} color="white" />
               <Text className="text-white text-xs font-dm ml-1 flex-1" numberOfLines={1}>
-                Address, loca...
+                {locationText}
               </Text>
               <Ionicons name="chevron-down" size={14} color="white" />
             </TouchableOpacity>
@@ -198,22 +307,14 @@ export default function Homepage({ navigation }) {
         {/* Featured Services */}
         <View className="bg-white px-4 pt-5 pb-2 -mt-5 rounded-t-3xl">
           <Text className="text-base font-semibold font-dm text-gray-900 mb-3">Featured Services</Text>
-          
+
           <View className="flex-row flex-wrap justify-between">
             {featuredServices.slice(0, 12).map((item, index) => (
-              <TouchableOpacity
+              <FeaturedServiceItem
                 key={index}
-                className="items-center mb-4"
-                style={{ width: '23%' }}
+                item={item}
                 onPress={() => navigation.navigate("ProviderList", { service: item.route })}
-              >
-                <View className="w-full aspect-square bg-white border border-gray-200 rounded-2xl items-center justify-center mb-1.5">
-                  <MaterialCommunityIcons name={item.icon} size={32} color="#DC2626" />
-                </View>
-                <Text className="text-[9px] text-gray-700 text-center font-dm w-full" numberOfLines={2} style={{ lineHeight: 11 }}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </View>
@@ -271,89 +372,8 @@ export default function Homepage({ navigation }) {
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-4 px-4">
-            {/* Workshop Card 1 */}
-            <TouchableOpacity 
-              className="w-64 mr-3 bg-white border border-gray-200 rounded-2xl overflow-hidden"
-              onPress={() => navigation.navigate("ProviderDetails")}
-            >
-              <View className="relative">
-                <Image
-                  source={require("../../assets/images/r.png")}
-                  className="w-full h-28"
-                  resizeMode="cover"
-                />
-                <View className="absolute top-2 right-2 bg-red-600 px-2 py-1 rounded-full flex-row items-center">
-                  <Ionicons name="pricetag" size={10} color="white" />
-                  <Text className="text-white text-[10px] font-bold font-dm ml-1">Flat ₹100 off</Text>
-                </View>
-                <TouchableOpacity className="absolute top-2 left-2 w-7 h-7 bg-white/90 rounded-full items-center justify-center">
-                  <Ionicons name="bookmark-outline" size={16} color="#DC2626" />
-                </TouchableOpacity>
-              </View>
-              <View className="p-2.5">
-                <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
-                  Dwarka mor service
-                </Text>
-                <View className="flex-row items-center mt-1">
-                  <Text className="text-xs text-gray-700 font-dm">4.0</Text>
-                  <View className="flex-row ml-1">
-                    {[1,2,3,4].map(i => (
-                      <Ionicons key={i} name="star" size={10} color="#FFA500" />
-                    ))}
-                    <Ionicons name="star-outline" size={10} color="#FFA500" />
-                  </View>
-                  <Text className="text-xs text-gray-500 font-dm ml-1">(120)</Text>
-                </View>
-                <View className="flex-row items-center mt-1.5">
-                  <Ionicons name="location" size={12} color="#666" />
-                  <Text className="text-[10px] text-gray-600 font-dm ml-1" numberOfLines={1}>
-                    7 km, Location address...
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            {/* Workshop Card 2 */}
-            <TouchableOpacity 
-              className="w-64 mr-3 bg-white border border-gray-200 rounded-2xl overflow-hidden"
-              onPress={() => navigation.navigate("ProviderDetails")}
-            >
-              <View className="relative">
-                <Image
-                  source={require("../../assets/images/r1.jpg")}
-                  className="w-full h-28"
-                  resizeMode="cover"
-                />
-                <View className="absolute top-2 right-2 bg-red-600 px-2 py-1 rounded-full flex-row items-center">
-                  <Ionicons name="pricetag" size={10} color="white" />
-                  <Text className="text-white text-[10px] font-bold font-dm ml-1">Flat ₹100 off</Text>
-                </View>
-                <TouchableOpacity className="absolute top-2 left-2 w-7 h-7 bg-white/90 rounded-full items-center justify-center">
-                  <Ionicons name="bookmark-outline" size={16} color="#DC2626" />
-                </TouchableOpacity>
-              </View>
-              <View className="p-2.5">
-                <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
-                  Dwarka mor service
-                </Text>
-                <View className="flex-row items-center mt-1">
-                  <Text className="text-xs text-gray-700 font-dm">4.0</Text>
-                  <View className="flex-row ml-1">
-                    {[1,2,3,4].map(i => (
-                      <Ionicons key={i} name="star" size={10} color="#FFA500" />
-                    ))}
-                    <Ionicons name="star-outline" size={10} color="#FFA500" />
-                  </View>
-                  <Text className="text-xs text-gray-500 font-dm ml-1">(120)</Text>
-                </View>
-                <View className="flex-row items-center mt-1.5">
-                  <Ionicons name="location" size={12} color="#666" />
-                  <Text className="text-[10px] text-gray-600 font-dm ml-1" numberOfLines={1}>
-                    7 km, Location address...
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            <WorkshopCard imagePath={require("../../assets/images/r.png")} navigation={navigation} />
+            <WorkshopCard imagePath={require("../../assets/images/r1.jpg")} navigation={navigation} />
           </ScrollView>
         </View>
       </ScrollView>
@@ -385,7 +405,6 @@ export default function Homepage({ navigation }) {
           targetScreen="Profile"
         />
       </View> */}
-      <Footer navigation={navigation} />
     </SafeAreaView>
   );
 }

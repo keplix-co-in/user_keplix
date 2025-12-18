@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import * as Location from "expo-location";
+import locationService from '../../services/locationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LocationPermissionScreen({ navigation }) {
@@ -18,37 +18,23 @@ export default function LocationPermissionScreen({ navigation }) {
     setLoading(true);
 
     try {
-      // Request location permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Request location permission using the service
+      const { status, location } = await locationService.requestPermission();
       
       if (status === "granted") {
         console.log("Location permission granted");
         
-        try {
-          // Get current location
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          
+        if (location) {
           console.log("Location:", location);
           
-          // Save location preferences
-          await AsyncStorage.setItem('location_permission', 'granted');
-          await AsyncStorage.setItem('user_location', JSON.stringify({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            timestamp: new Date().toISOString(),
-          }));
+          // Get address from coordinates
+          const address = await locationService.getAddressFromCoordinates(
+            location.latitude,
+            location.longitude
+          );
 
-          // Get address from coordinates (reverse geocoding)
-          const address = await Location.reverseGeocodeAsync({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          });
-
-          if (address && address.length > 0) {
-            console.log("Address:", address[0]);
-            await AsyncStorage.setItem('user_address', JSON.stringify(address[0]));
+          if (address) {
+            console.log("Address:", address);
           }
 
           Alert.alert(
@@ -61,14 +47,21 @@ export default function LocationPermissionScreen({ navigation }) {
               },
             ]
           );
-        } catch (locationError) {
-          console.log("Error getting location:", locationError);
-          await AsyncStorage.setItem('location_permission', 'granted');
-          navigation.navigate("Homepage");
+        } else {
+          // Permission granted but couldn't get location
+          Alert.alert(
+            'Location Unavailable',
+            'Permission granted but couldn\'t get your location. You can try again later.',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.navigate("Homepage"),
+              },
+            ]
+          );
         }
       } else {
         console.log("Location permission denied by user");
-        await AsyncStorage.setItem('location_permission', 'denied');
         
         Alert.alert(
           'Permission Denied',

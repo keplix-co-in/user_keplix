@@ -1,10 +1,96 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { View, Text, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bookingsAPI } from '../../services/api';
-import Footer from '../Footer/Footer';
+
+// Memoized BookingCard component to prevent unnecessary re-renders
+const BookingCard = memo(({ booking, onViewDetails, onEdit }) => {
+  const defaultImage = require('../../assets/images/p1.png');
+  const serviceImage = booking.service?.image
+    ? { uri: booking.service.image }
+    : defaultImage;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (timeString) => {
+    const time = new Date(`2000-01-01T${timeString}`);
+    return time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed': return 'text-green-600';
+      case 'pending': return 'text-yellow-600';
+      case 'completed': return 'text-green-600';
+      case 'cancelled': return 'text-gray-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  return (
+    <View className="bg-white border border-[#E8E8E8] rounded-2xl mb-4 mx-5 p-4">
+      <View className="flex-row">
+        <View className="relative w-[120px] h-[100px] mr-4">
+          <Image source={serviceImage} className="w-full h-full rounded-xl" />
+          <View className="absolute bg-red-600/90 rounded-lg p-1.5 top-2 right-2">
+            <MaterialCommunityIcons name="wrench" size={20} color="#fff" />
+          </View>
+        </View>
+        <View className="flex-1">
+          <Text className="text-lg font-semibold font-dm text-gray-900 mb-1">
+            {booking.service?.name || 'Service'}
+          </Text>
+          <Text className="text-sm text-gray-500 font-dm mb-2">
+            {booking.service?.vendor_name || 'Vendor'}
+          </Text>
+          <Text className="text-xs text-gray-600 font-dm mb-2">
+            {`${formatDate(booking.booking_date)} • ${formatTime(booking.booking_time)}`}
+          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text className={`text-sm font-semibold font-dm capitalize ${getStatusColor(booking.status)}`}>
+              {booking.status}
+            </Text>
+            {booking.service?.price && (
+              <Text className="text-lg font-bold text-gray-900 font-dm">₹{booking.service.price}</Text>
+            )}
+          </View>
+        </View>
+      </View>
+      <View className="flex-row justify-between mt-4 pt-4 border-t border-gray-100">
+        <TouchableOpacity
+          className="py-2 px-4"
+          onPress={onViewDetails}
+        >
+          <Text className="text-sm font-semibold font-dm text-red-600">View Details</Text>
+        </TouchableOpacity>
+        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+          <TouchableOpacity
+            className="bg-red-600 flex-row items-center py-2 px-5 rounded-full"
+            onPress={onEdit}
+          >
+            <Ionicons name="pencil" size={14} color="white" />
+            <Text className="text-sm font-semibold font-dm text-white ml-1.5">Edit</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+});
+
+BookingCard.displayName = 'BookingCard';
 
 export default function BookingList({ navigation }) {
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -72,96 +158,38 @@ export default function BookingList({ navigation }) {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchBookings();
     setRefreshing(false);
-  };
+  }, [fetchBookings]);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
-    });
-  };
+  // Memoized render item callback for FlatList
+  const renderBookingItem = useCallback(({ item }) => (
+    <BookingCard
+      booking={item}
+      onViewDetails={() => navigation.navigate('BookingDetails', { booking: item })}
+      onEdit={() => navigation.navigate('EditBooking', { booking: item })}
+    />
+  ), [navigation]);
 
-  const formatTime = (timeString) => {
-    const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
-    });
-  };
+  // Memoized key extractor for FlatList
+  const keyExtractor = useCallback((item) => item.id.toString(), []);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed': return 'text-green-600';
-      case 'pending': return 'text-yellow-600';
-      case 'completed': return 'text-green-600';
-      case 'cancelled': return 'text-gray-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const BookingCard = ({ booking }) => {
-    // Default image if service image is not available
-    const defaultImage = require('../../assets/images/p1.png');
-    const serviceImage = booking.service?.image 
-      ? { uri: booking.service.image } 
-      : defaultImage;
-
-    return (
-      <View className="bg-white border border-[#E8E8E8] rounded-2xl mb-4 mx-5 p-4">
-        <View className="flex-row">
-          <View className="relative w-[120px] h-[100px] mr-4">
-            <Image source={serviceImage} className="w-full h-full rounded-xl" />
-            <View className="absolute bg-red-600/90 rounded-lg p-1.5 top-2 right-2">
-              <MaterialCommunityIcons name="wrench" size={20} color="#fff" />
-            </View>
-          </View>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold font-dm text-gray-900 mb-1">
-              {booking.service?.name || 'Service'}
-            </Text>
-            <Text className="text-sm text-gray-500 font-dm mb-2">
-              {booking.service?.vendor_name || 'Vendor'}
-            </Text>
-            <Text className="text-xs text-gray-600 font-dm mb-2">
-              {`${formatDate(booking.booking_date)} • ${formatTime(booking.booking_time)}`}
-            </Text>
-            <View className="flex-row items-center justify-between">
-              <Text className={`text-sm font-semibold font-dm capitalize ${getStatusColor(booking.status)}`}>
-                {booking.status}
-              </Text>
-              {booking.service?.price && (
-                <Text className="text-lg font-bold text-gray-900 font-dm">₹{booking.service.price}</Text>
-              )}
-            </View>
-          </View>
-        </View>
-        <View className="flex-row justify-between mt-4 pt-4 border-t border-gray-100">
-          <TouchableOpacity 
-            className="py-2 px-4" 
-            onPress={() => navigation.navigate('BookingDetails', { booking })}
-          >
-            <Text className="text-sm font-semibold font-dm text-red-600">View Details</Text>
-          </TouchableOpacity>
-          {(booking.status === 'pending' || booking.status === 'confirmed') && (
-            <TouchableOpacity 
-              className="bg-red-600 flex-row items-center py-2 px-5 rounded-full" 
-              onPress={() => navigation.navigate('EditBooking', { booking })}
-            >
-              <Ionicons name="pencil" size={14} color="white" />
-              <Text className="text-sm font-semibold font-dm text-white ml-1.5">Edit</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
+  // Memoized empty component
+  const EmptyListComponent = useMemo(() => (
+    <View className="flex-1 items-center justify-center py-10">
+      <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
+      <Text className="text-base text-gray-600 font-dm mt-4">
+        No {activeTab} bookings found
+      </Text>
+      <Text className="text-sm text-gray-400 font-dm mt-2 text-center px-8">
+        {activeTab === 'upcoming'
+          ? 'Book a service to see it here'
+          : 'Your past bookings will appear here'}
+      </Text>
+    </View>
+  ), [activeTab]);
 
   const NavItem = ({ icon, text, active, navigation, targetScreen }) => (
     <TouchableOpacity 
@@ -226,48 +254,39 @@ export default function BookingList({ navigation }) {
       </View>
 
       {/* Bookings List */}
-      <ScrollView 
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {loading ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <ActivityIndicator size="large" color="#EF4444" />
-            <Text className="text-base text-gray-600 font-dm mt-4">Loading bookings...</Text>
-          </View>
-        ) : error ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <Ionicons name="alert-circle" size={48} color="#EF4444" />
-            <Text className="text-base text-gray-600 font-dm mt-4 text-center px-8">{error}</Text>
-            <TouchableOpacity 
-              className="bg-red-500 py-3 px-6 rounded-lg mt-4"
-              onPress={fetchBookings}
-            >
-              <Text className="text-white font-dm font-medium">Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : bookings.length === 0 ? (
-          <View className="flex-1 items-center justify-center py-10">
-            <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
-            <Text className="text-base text-gray-600 font-dm mt-4">
-              No {activeTab} bookings found
-            </Text>
-            <Text className="text-sm text-gray-400 font-dm mt-2 text-center px-8">
-              {activeTab === 'upcoming' 
-                ? 'Book a service to see it here' 
-                : 'Your past bookings will appear here'}
-            </Text>
-          </View>
-        ) : (
-          bookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))
-        )}
-      </ScrollView>
-
-       <Footer navigation={navigation} />
+      {loading ? (
+        <View className="flex-1 items-center justify-center py-10">
+          <ActivityIndicator size="large" color="#EF4444" />
+          <Text className="text-base text-gray-600 font-dm mt-4">Loading bookings...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center py-10">
+          <Ionicons name="alert-circle" size={48} color="#EF4444" />
+          <Text className="text-base text-gray-600 font-dm mt-4 text-center px-8">{error}</Text>
+          <TouchableOpacity
+            className="bg-red-500 py-3 px-6 rounded-lg mt-4"
+            onPress={fetchBookings}
+          >
+            <Text className="text-white font-dm font-medium">Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={bookings}
+          renderItem={renderBookingItem}
+          keyExtractor={keyExtractor}
+          ListEmptyComponent={EmptyListComponent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          contentContainerStyle={bookings.length === 0 ? { flex: 1 } : {}}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
+          windowSize={10}
+        />
+      )}
       
     </SafeAreaView>
   );
