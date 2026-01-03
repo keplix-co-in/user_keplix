@@ -269,12 +269,6 @@ export default function Homepage({ navigation }) {
             >
               <Ionicons name="search-outline" size={18} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate("ScreenTester")}
-              className="w-9 h-9 bg-white/20 rounded-full items-center justify-center"
-            >
-              <Ionicons name="grid" size={18} color="white" />
-            </TouchableOpacity>
           </View>
 
           {/* Banner Discount Section */}
