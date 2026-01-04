@@ -51,7 +51,7 @@ const Footer = ({ navigation, currentRoute }) => {
       style={containerStyle}
     >
       <NavItem icon="home" text="Home" isActive={currentRoute === "Homepage"} onPress={navigateToHomepage} />
-      <NavItem icon="grid" text="Services" isActive={currentRoute === "ServicesCard"} onPress={navigateToServices} />
+      <NavItem icon="grid" text="Garages" isActive={currentRoute === "ServicesCard"} onPress={navigateToServices} />
       <NavItem icon="document-text" text="Bookings" isActive={currentRoute === "BookingList"} onPress={navigateToBookings} />
       <NavItem icon="person" text="Profile" isActive={currentRoute === "Profile"} onPress={navigateToProfile} />
     </View>

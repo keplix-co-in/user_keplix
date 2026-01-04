@@ -83,12 +83,12 @@ export default function SignUp({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <Text className="font-medium text-black text-[32px] mb-8 font-['DM']">Sign Up</Text>
+      <Text className="font-bold text-black text-[40px] mb-8 font-['DM']">Sign Up</Text>
 
       <View>
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your email address</Text>
         <TextInput
-          className={`h-[56px] border-2 rounded-2xl px-4 text-base text-black font-['DM'] ${submitted && (!email.trim() || !isEmailValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}
+          className={`h-[56px] border-2 rounded-5xl px-4 text-base text-black font-['DM'] ${submitted && (!email.trim() || !isEmailValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}
           placeholder="Eg: xyz@gmail.com"
           placeholderTextColor="#999"
           value={email}
@@ -100,7 +100,7 @@ export default function SignUp({ navigation }) {
 
       <View className="mt-5">
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your new password</Text>
-        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${submitted && (!newPassword.trim() || !isPasswordLengthValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
+        <View className={`flex-row items-center border-2 rounded-5xl px-4 h-[56px] ${submitted && (!newPassword.trim() || !isPasswordLengthValid) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
           <TextInput
             className="flex-1 text-base text-black font-['DM']"
             placeholder="••••••••"
@@ -121,7 +121,7 @@ export default function SignUp({ navigation }) {
 
       <View className="mt-5">
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Confirm new password</Text>
-        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${submitted && (!confirmPassword.trim() || !isPasswordMatch) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
+        <View className={`flex-row items-center border-2 rounded-5xl px-4 h-[56px] ${submitted && (!confirmPassword.trim() || !isPasswordMatch) ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
           <TextInput
             className="flex-1 text-base text-black font-['DM']"
             placeholder="••••••••"

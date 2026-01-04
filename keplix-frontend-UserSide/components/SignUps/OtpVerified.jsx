@@ -23,10 +23,10 @@ export default function OtpVerified({ navigation }) {
 
   return (
     <SafeAreaView className="flex-1 justify-center items-center bg-white">
-      <Animated.View className="justify-center items-center bg-[#E7F9F2] rounded-[100px] w-[120px] h-[120px]" style={{ transform: [{ scale }] }}>
-        <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+      <Animated.View className="justify-center items-center  rounded-[100px] w-[120px] h-[120px]" style={{ transform: [{ scale }] }}>
+        <Ionicons name="checkmark-circle" size={100} color="#ff0000" />
       </Animated.View>
-      <Text className="mt-5 text-lg text-center text-[#333] font-['DM']">Your phone number has been verified successfully!</Text>
+      <Text className="mt-5 text-2xl text-center text-[#000000] font-['DM']">Your phone number has been verified successfully!</Text>
     </SafeAreaView>
   );
 }

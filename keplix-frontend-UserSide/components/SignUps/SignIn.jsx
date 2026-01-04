@@ -78,16 +78,16 @@ export default function SignIn({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <Text className="font-medium text-[32px] mb-2.5 text-black font-['DM']">Sign In</Text>
+      <Text className="font-bold text-[32px] mb-2.5 text-black font-['DM']">Sign In</Text>
 
       <View className="mt-8">
-        <Text className="text-sm text-[#666] mb-2 font-['DM']">
+        <Text className="text-gray-800 text-black- mb-2 font-['DM']">
           Enter your email address
         </Text>
         <TextInput
-          className={`h-[56px] border-2 rounded-2xl px-4 text-base text-black font-['DM'] ${!isValid ? 'border-red-600' : 'border-[#E8E8E8]'}`}
+          className={`h-[56px] border-2 rounded-5xl px-4 text-base text-black font-['DM'] ${!isValid ? 'border-error' : 'border-black-200'}`}
           placeholder="Eg: xyz@gmail.com"
-          placeholderTextColor="#999"
+          placeholderTextColor="#636363"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -96,12 +96,12 @@ export default function SignIn({ navigation }) {
       </View>
 
       <View className="mt-5">
-        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter password</Text>
-        <View className={`flex-row items-center border-2 rounded-2xl px-4 h-[56px] ${!isValid ? 'border-red-600' : 'border-[#E8E8E8]'}`}>
+        <Text className="text-gray-800 text-black- mb-2 font-['DM']">Enter password</Text>
+        <View className={`flex-row items-center border-2 rounded-5xl px-4 h-[56px] ${!isValid ? 'border-error' : 'border-black-200'}`}>
           <TextInput
             className="flex-1 text-base text-black font-['DM']"
             placeholder="••••••••"
-            placeholderTextColor="#999"
+            placeholderTextColor="#636363"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={secureEntry}
@@ -110,7 +110,7 @@ export default function SignIn({ navigation }) {
             <Ionicons
               name={secureEntry ? "eye-off-outline" : "eye-outline"}
               size={20}
-              color="#999"
+              color="#636363"
             />
           </TouchableOpacity>
         </View>
