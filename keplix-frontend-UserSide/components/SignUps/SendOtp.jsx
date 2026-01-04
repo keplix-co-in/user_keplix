@@ -105,7 +105,7 @@ export default function SendOtp({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      <Text className="text-black font-medium text-[32px] mb-1 font-['DM']">Sign Up</Text>
+      <Text className="text-black font-bold text-[32px] mb-1 font-['DM']">Sign Up</Text>
       <Text className="text-sm text-[#999] mb-8 font-['DM']">
         An OTP code has been sent via{'\n'}phone number +91**********
       </Text>
@@ -114,7 +114,7 @@ export default function SendOtp({ navigation, route }) {
         {otp.map((digit, index) => (
           <View
             key={index}
-            className="w-[48px] h-[48px] bg-[#F5F5F5] rounded-xl items-center justify-center border border-[#E8E8E8]"
+            className="w-[48px] h-[48px] bg-[#F5F5F5] rounded-2xl items-center justify-center border border-[#E8E8E8]"
           >
             <TextInput
               ref={(ref) => (inputRefs[index] = ref)}
@@ -142,18 +142,27 @@ export default function SendOtp({ navigation, route }) {
         )}
       </TouchableOpacity>
 
-      <View className="flex-row items-center justify-center mb-5">
-        <Text className="text-[#666] text-sm font-['DM']">
-          Didn't receive OTP? 
-        </Text>
-        <TouchableOpacity onPress={handleResend} disabled={resending}>
-          {resending ? (
-            <ActivityIndicator size="small" color="#D82424" />
-          ) : (
-            <Text className="text-red-600 text-sm font-medium font-['DM'] ml-1">Resend</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <View className="flex-row justify-center items-center mt-4 mb-8">
+  <Text className="text-[#666] text-sm font-['DM']">
+    Didn't receive OTP?
+  </Text>
+  
+  <TouchableOpacity 
+    onPress={handleResend} 
+    disabled={resending}
+    className="ml-2 active:opacity-60"
+  >
+    {resending ? (
+      <ActivityIndicator size="small" color="#D82424" />
+    ) : (
+      <Text className="text-red-600 text-sm font-bold font-['DM']">
+        Resend
+      </Text>
+    )}
+  </TouchableOpacity>
+</View>
+      
+      
 
       <Text className="text-xs text-[#999] text-center px-8 mb-5 font-['DM']">
         By signing or logging in, you agree to the{' '}

@@ -54,14 +54,14 @@ export default function ForgotPassword({navigation}) {
         </TouchableOpacity>
       </View>
 
-      <Text className="font-medium text-black text-[32px] mb-2 font-['DM']">Forgot Password</Text>
+      <Text className="font-bold text-black text-[32px] mb-2 font-['DM']">Forgot Password</Text>
 
       <View className="mt-8">
-        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your email address</Text>
+        <Text className="text-sm text-black mb-2 font-['DM']">Enter your email address</Text>
         <TextInput
-          className="text-black h-[56px] border-2 border-[#E8E8E8] rounded-2xl px-4 text-base font-['DM']"
+          className="text-black h-[56px] border-2 border-black-200 rounded-5xl px-4 text-base font-['DM']"
           placeholder="Eg: xyz@gmail.com"
-          placeholderTextColor="#999"
+          placeholderTextColor="#636363"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"

@@ -40,7 +40,7 @@ export default function ResetPassword({ navigation, route }) {
 
       <View className="mt-4">
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your new password</Text>
-        <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-2xl px-4 h-[56px]">
+        <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-5xl px-4 h-[56px]">
           <TextInput
             className="flex-1 text-base text-black font-['DM']"
             placeholder="Eg: xyz@gmail.com"
@@ -61,7 +61,7 @@ export default function ResetPassword({ navigation, route }) {
 
       <View className="mt-5">
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Confirm new password</Text>
-        <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-2xl px-4 h-[56px]">
+        <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-5xl px-4 h-[56px]">
           <TextInput
             className="flex-1 text-base text-black font-['DM']"
             placeholder="••••••••"
