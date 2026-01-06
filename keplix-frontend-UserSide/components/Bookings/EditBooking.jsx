@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
 import { paymentsAPI } from '../../services/api';
@@ -8,7 +8,7 @@ export default function EditBooking({ navigation, route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [payment, setPayment] = useState(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
-  
+
   // Get booking data from navigation params
   const booking = route?.params?.booking || null;
 
@@ -33,19 +33,19 @@ export default function EditBooking({ navigation, route }) {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
   const formatTime = (timeString) => {
     const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    return time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -54,7 +54,7 @@ export default function EditBooking({ navigation, route }) {
       <SafeAreaView className="flex-1 bg-white items-center justify-center" edges={['top']}>
         <Ionicons name="alert-circle-outline" size={64} color="#9CA3AF" />
         <Text className="text-lg text-gray-600 font-dm mt-4">No booking data available</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           className="bg-[#DC2626] py-3 px-6 rounded-full mt-6"
           onPress={() => navigation.goBack()}
         >
@@ -71,22 +71,27 @@ export default function EditBooking({ navigation, route }) {
       visible={modalVisible}
       onRequestClose={() => setModalVisible(false)}
     >
-      <View className="flex-1 bg-[rgba(49,49,49,0.5)] justify-center items-center">
-        <TouchableOpacity onPress={() => setModalVisible(false)}>   
-          <Ionicons name="close-outline" size={24} color="#000" className="p-1 bg-white rounded-full" />
-        </TouchableOpacity>
-        <View className="bg-white rounded-xl p-5 w-4/5 items-center">
-          <Text className="text-xl text-center mb-5">
+      <View className="flex-1 bg-black/60 justify-center items-center px-6">
+        <View className="bg-white rounded-3xl p-6 items-center w-full">
+          <View className="flex-row w-full justify-between items-start mb-2">
+            <View className="w-6" />
+            <Text className="text-lg font-bold text-gray-900 font-dm text-center mt-2">Cancel Booking</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)} className="p-1">
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          <Text className="text-lg font-medium text-gray-600 text-center mb-6 font-dm px-4 mt-4 leading-6">
             Are you sure you want to cancel your booking?
           </Text>
           <TouchableOpacity
-            className="bg-[#DC2626] py-3 px-6 rounded-full w-full mb-2.5"
+            className="bg-[#DC2626] py-3.5 rounded-full w-full mb-2.5 shadow-sm"
             onPress={() => {
               setModalVisible(false);
               navigation.navigate('CancelBooking', { booking });
             }}
           >
-            <Text className="text-white text-base font-medium font-dm text-center">Cancel Booking</Text>
+            <Text className="text-white text-base font-bold font-dm text-center">Confirm</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -95,118 +100,120 @@ export default function EditBooking({ navigation, route }) {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="flex-row items-center mb-5 p-5">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name={"arrow-back-outline"} size={30} color="#000" className="border-2 border-[#E2E2E2] rounded-full p-1" />
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 pt-4 pb-2">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center"
+        >
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
+        <Text className="text-lg font-bold text-gray-900 font-dm">Booking Details</Text>
+        <View className="w-10" />
       </View>
 
-      <Text className="text-2xl font-medium font-dm px-5 mb-5">Edit Booking</Text>
-
-      <View className="flex-row justify-between px-5 mb-5">
-        <View className="flex-1 mr-1">
-          <Text className="text-xl font-medium font-dm mb-1">
-            {booking.service?.vendor_name || 'Vendor Name'}
-          </Text>
-          <View className="flex-row items-center mb-4">
-            <Text className="text-base font-medium font-dm text-gray-500">Service: </Text>
-            <Text className="text-base font-medium font-dm">
+      <ScrollView className="flex-1 px-5 pt-4" showsVerticalScrollIndicator={false}>
+        {/* Service Info Card */}
+        <View className="flex-row items-start mb-6">
+          <Image
+            source={
+              booking.service?.image
+                ? { uri: booking.service.image }
+                : require('../../assets/images/p1.png')
+            }
+            className="w-24 h-24 rounded-2xl bg-gray-100"
+          />
+          <View className="flex-1 ml-4 py-1">
+            <Text className="text-xl font-bold font-dm text-gray-900 mb-1" numberOfLines={2}>
               {booking.service?.name || 'Service Name'}
             </Text>
-          </View>
-          <View className="flex-row items-center mb-4">
-            <Text className="text-base font-medium font-dm text-gray-500">Status: </Text>
-            <Text className={`text-base font-medium font-dm capitalize ${
-              booking.status === 'confirmed' ? 'text-green-600' : 
-              booking.status === 'pending' ? 'text-yellow-600' : 'text-gray-600'
-            }`}>
-              {booking.status}
+            <Text className="text-sm font-medium text-gray-500 font-dm mb-3">
+              {booking.service?.vendor_name || 'Vendor Name'}
             </Text>
-          </View>
-          <TouchableOpacity className="bg-[#40A69F] flex-row items-center py-2.5 px-7 rounded-full self-start">
-            <Ionicons name="location" size={20} color="white" />
-            <Text className="text-base font-medium font-dm text-white ml-1">See location</Text>
-          </TouchableOpacity>
-        </View>
-        <Image
-          source={
-            booking.service?.image 
-              ? { uri: booking.service.image } 
-              : require('../../assets/images/p1.png')
-          }
-          className="w-[140px] h-[120px] rounded-2xl"
-        />
-      </View>
 
-      <Text className="text-base font-medium font-dm text-[#0000008F] mx-5 my-2.5">Booked Slot:</Text>
-      <View className="border-2 border-[#E2E2E2] rounded-3xl p-5 mx-5 mb-5">
-        <View className="flex-row justify-between mb-5">
-          <View className="flex-1">
-            <View className="mb-4">
-              <Text className="text-xs font-medium font-dm text-[#0000008F] mb-1">Date:</Text>
-              <Text className="text-xl font-semibold font-dm">{formatDate(booking.booking_date)}</Text>
-            </View>
-            <View className="mb-4">
-              <Text className="text-xs font-medium font-dm text-[#0000008F] mb-1">Time Slot:</Text>
-              <Text className="text-xl font-semibold font-dm">{formatTime(booking.booking_time)}</Text>
+            <View className="flex-row items-center">
+              <View className={`px-3 py-1 rounded-full ${booking.status === 'confirmed' ? 'bg-green-100' :
+                  booking.status === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
+                }`}>
+                <Text className={`text-xs font-bold font-dm capitalize ${booking.status === 'confirmed' ? 'text-green-700' :
+                    booking.status === 'pending' ? 'text-yellow-700' : 'text-gray-600'
+                  }`}>
+                  {booking.status}
+                </Text>
+              </View>
             </View>
           </View>
-          
-          <View className="flex-1">
-            <View className="mb-4">
-              <Text className="text-xs font-medium font-dm text-[#0000008F] mb-1">Payment:</Text>
-              {loadingPayment ? (
-                <ActivityIndicator size="small" color="#DC2626" />
-              ) : (
-                <Text className="text-xl font-semibold font-dm capitalize">
-                  {payment?.method || 'Not paid'}
-                </Text>
-              )}
+        </View>
+
+        {/* Booked Slot */}
+        <View className="mb-6">
+          <Text className="text-base font-bold text-gray-900 font-dm mb-3">Booked Slot</Text>
+          <View className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex-row justify-between items-center">
+            <View>
+              <Text className="text-xs text-gray-500 font-dm mb-1">Date & Time</Text>
+              <Text className="text-base font-bold text-gray-900 font-dm">
+                {formatDate(booking.booking_date)}
+              </Text>
+              <Text className="text-sm font-medium text-gray-600 font-dm mt-0.5">
+                {formatTime(booking.booking_time)}
+              </Text>
             </View>
-            <View className="mb-4">
-              <Text className="text-xs font-medium font-dm text-[#0000008F] mb-1">Price:</Text>
-              <Text className="text-xl font-semibold font-dm">
-                {booking.service?.price ? `₹${booking.service.price}` : 'N/A'}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("RescheduleBooking", { booking })}
+              className="bg-white border border-gray-200 px-4 py-2 rounded-lg"
+            >
+              <Text className="text-[#DC2626] text-xs font-bold font-dm">Reschedule</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Payment Info */}
+        <View className="mb-6">
+          <Text className="text-base font-bold text-gray-900 font-dm mb-3">Payment Details</Text>
+          <View className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+            <View className="flex-row justify-between mb-3">
+              <Text className="text-gray-500 font-dm">Method</Text>
+              <Text className="text-gray-900 font-bold font-dm capitalize">
+                {loadingPayment ? 'Loading...' : (payment?.method || 'Pay on Delivery')}
+              </Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-gray-500 font-dm">Total Amount</Text>
+              <Text className="text-gray-900 font-bold font-dm text-lg">
+                {booking.service?.price ? `₹${booking.service.price.toLocaleString('en-IN')}` : 'N/A'}
               </Text>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity 
-          className="bg-[#40A69F] flex-row items-center justify-center p-4 rounded-lg" 
-          onPress={() => navigation.navigate("RescheduleBooking", { booking })}
+        {/* Location */}
+        <View className="mb-8">
+          <TouchableOpacity className="flex-row items-center justify-between bg-white border border-gray-100 p-4 rounded-2xl shadow-sm">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 bg-red-50 rounded-full items-center justify-center mr-3">
+                <Ionicons name="location" size={20} color="#DC2626" />
+              </View>
+              <View>
+                <Text className="text-sm font-bold text-gray-900 font-dm">Service Location</Text>
+                <Text className="text-xs text-gray-500 font-dm">View on map</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Footer Actions */}
+      <View className="p-5 border-t border-gray-100 bg-white">
+        <TouchableOpacity
+          className="bg-[#DC2626] w-full py-4 rounded-full items-center shadow-lg shadow-red-200"
+          onPress={() => setModalVisible(true)}
         >
-          <Ionicons name="calendar" size={20} color="white" />
-          <Text className="text-white ml-2 text-base font-medium font-dm">Reschedule Booking</Text>
+          <Text className="text-white text-base font-bold font-dm">Cancel Booking</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Note Section */}
-      <View className="px-5 mb-5">
-        <Text className="text-base font-medium font-dm mb-1">Note:</Text>
-        <Text className="text-[#0000008F] text-base font-medium font-dm">
-          You can cancel your booking till 1 hour before appointment and you'll receive a confirmation.
-        </Text>
-        {booking.notes && (
-          <>
-            <Text className="text-base font-medium font-dm mb-1 mt-3">Booking Notes:</Text>
-            <Text className="text-[#0000008F] text-base font-medium font-dm">
-              {booking.notes}
-            </Text>
-          </>
-        )}
-      </View>
-
-      {/* Cancel Button */}
-      <TouchableOpacity 
-        className="bg-[#DC2626] mx-5 p-4 rounded-full items-center"
-        onPress={() => setModalVisible(true)}
-      >
-        <Text className="text-white text-base font-medium font-dm">Cancel Booking</Text>
-      </TouchableOpacity>
 
       <CancelConfirmationModal />
     </SafeAreaView>
   );
 };
-

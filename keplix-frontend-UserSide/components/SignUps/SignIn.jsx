@@ -81,7 +81,7 @@ export default function SignIn({ navigation }) {
       <Text className="font-bold text-[32px] mb-2.5 text-black font-['DM']">Sign In</Text>
 
       <View className="mt-8">
-        <Text className="text-gray-800 text-black- mb-2 font-['DM']">
+        <Text className="text-gray-800 text-black mb-2 font-['DM']">
           Enter your email address
         </Text>
         <TextInput
@@ -96,7 +96,7 @@ export default function SignIn({ navigation }) {
       </View>
 
       <View className="mt-5">
-        <Text className="text-gray-800 text-black- mb-2 font-['DM']">Enter password</Text>
+        <Text className="text-gray-800 text-black mb-2 font-['DM']">Enter password</Text>
         <View className={`flex-row items-center border-2 rounded-5xl px-4 h-[56px] ${!isValid ? 'border-error' : 'border-black-200'}`}>
           <TextInput
             className="flex-1 text-base text-black font-['DM']"

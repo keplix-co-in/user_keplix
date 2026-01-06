@@ -61,8 +61,8 @@ const CustomSlider = ({ min, max, value, step, onChange }) => {
   });
 
   const ProviderList = () => {
-  const route = useRoute();
-  const { service } = route.params || {};
+    const route = useRoute();
+    const { service } = route.params || {};
   };
 
   return (
@@ -98,7 +98,7 @@ export default function ProviderList({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Get service type from navigation params
   const serviceType = route?.params?.service || '';
 
@@ -114,22 +114,121 @@ export default function ProviderList({ navigation, route }) {
     try {
       setLoading(true);
       const response = await servicesAPI.getAllServices();
-      
+
       // Filter by service type if provided
       let filtered = response.data;
       if (serviceType) {
-        filtered = filtered.filter(service => 
+        filtered = filtered.filter(service =>
           service.name?.toLowerCase().includes(serviceType.toLowerCase()) ||
           service.category?.toLowerCase().includes(serviceType.toLowerCase())
         );
       }
-      
+
       setServices(filtered);
       setFilteredServices(filtered);
     } catch (error) {
       console.error('Error fetching services:', error);
-      setServices([]);
-      setFilteredServices([]);
+      // Fallback to mock data
+      const mockData = [
+        {
+          id: '1',
+          name: 'Engine Repair',
+          vendor_name: 'Dwarka mor service',
+          price: 10499,
+          rating: 4.0,
+          reviewCount: 128,
+          distance: 7,
+          vendor_address: 'Dwarka Mor, New Delhi',
+          image: require('../../assets/images/r1.jpg'),
+          is_available: true,
+        },
+        {
+          id: '2',
+          name: 'Car Detailing',
+          vendor_name: 'Premium Auto Care',
+          price: 2999,
+          rating: 4.5,
+          reviewCount: 256,
+          distance: 3,
+          vendor_address: 'Janakpuri, New Delhi',
+          image: require('../../assets/images/r.png'),
+          is_available: true,
+        },
+        {
+          id: '3',
+          name: 'AC Service',
+          vendor_name: 'Cool Breeze Auto',
+          price: 1499,
+          rating: 4.2,
+          reviewCount: 89,
+          distance: 5,
+          vendor_address: 'Rajouri Garden, New Delhi',
+          image: require('../../assets/images/r1.jpg'),
+          is_available: true,
+        },
+        {
+          id: '4',
+          name: 'Brake Service',
+          vendor_name: 'Safe Drive Motors',
+          price: 3499,
+          rating: 4.3,
+          reviewCount: 145,
+          distance: 4,
+          vendor_address: 'Punjabi Bagh, New Delhi',
+          image: require('../../assets/images/r.png'),
+          is_available: true,
+        },
+        {
+          id: '5',
+          name: 'Oil Change',
+          vendor_name: 'Quick Service Center',
+          price: 899,
+          rating: 4.1,
+          reviewCount: 203,
+          distance: 2,
+          vendor_address: 'Tilak Nagar, New Delhi',
+          image: require('../../assets/images/r1.jpg'),
+          is_available: true,
+        },
+        {
+          id: '6',
+          name: 'Tire Replacement',
+          vendor_name: 'Wheel Masters',
+          price: 5999,
+          rating: 4.4,
+          reviewCount: 167,
+          distance: 6,
+          vendor_address: 'Vikaspuri, New Delhi',
+          image: require('../../assets/images/r.png'),
+          is_available: true,
+        },
+        {
+          id: '7',
+          name: 'Battery Service',
+          vendor_name: 'Power Auto Solutions',
+          price: 4500,
+          rating: 4.0,
+          reviewCount: 92,
+          distance: 8,
+          vendor_address: 'Uttam Nagar, New Delhi',
+          image: require('../../assets/images/r1.jpg'),
+          is_available: true,
+        },
+        {
+          id: '8',
+          name: 'Car Inspection',
+          vendor_name: 'Expert Check Auto',
+          price: 1999,
+          rating: 4.6,
+          reviewCount: 312,
+          distance: 4,
+          vendor_address: 'Janakpuri West, New Delhi',
+          image: require('../../assets/images/r.png'),
+          is_available: true,
+        },
+      ];
+      setServices(mockData);
+      setFilteredServices(mockData);
     } finally {
       setLoading(false);
     }
@@ -143,7 +242,7 @@ export default function ProviderList({ navigation, route }) {
 
   const applyAllFilters = () => {
     let filtered = [...services];
-    
+
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(service =>
@@ -152,28 +251,28 @@ export default function ProviderList({ navigation, route }) {
         service.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     // Apply price filter
-    filtered = filtered.filter(service => 
+    filtered = filtered.filter(service =>
       parseFloat(service.price || 0) <= price
     );
-    
+
     // Apply rating filter (if rating data is available)
     // Note: Backend doesn't have rating yet, so this is placeholder
     // filtered = filtered.filter(service => 
     //   (service.rating || 0) >= rating
     // );
-    
+
     setFilteredServices(filtered);
   };
 
   const applyFilters = () => {
     const newFilters = [];
-    
+
     if (distance < 20) newFilters.push(`${distance}km`);
-    if (price < 50000) newFilters.push(`Below ₹${(price/1000).toFixed(0)}k`);
+    if (price < 50000) newFilters.push(`Below ₹${(price / 1000).toFixed(0)}k`);
     if (rating > 1) newFilters.push(`${rating}.0+ rating`);
-    
+
     setActiveFilters(newFilters);
     setModalVisible(false);
     applyAllFilters();
@@ -182,7 +281,7 @@ export default function ProviderList({ navigation, route }) {
   const removeFilter = (index) => {
     const newFilters = activeFilters.filter((_, i) => i !== index);
     setActiveFilters(newFilters);
-    
+
     // Reset filter values
     if (index === 0) setDistance(20);
     if (index === 1) setPrice(50000);
@@ -190,39 +289,76 @@ export default function ProviderList({ navigation, route }) {
   };
 
   const renderProvider = ({ item }) => (
-    <TouchableOpacity 
-      className="flex-row bg-white border border-[#E8E8E8] rounded-2xl p-4 mx-5 mb-3" 
+    <TouchableOpacity
+      className="bg-white border border-gray-100 rounded-2xl mx-5 mb-4 overflow-hidden shadow-sm"
       onPress={() => navigation.navigate("ProviderDetails", { service: item })}
+      activeOpacity={0.7}
     >
-      <Image 
-        source={item.image ? { uri: item.image } : require('../../assets/images/p1.png')} 
-        className="w-[100px] h-[100px] rounded-xl mr-4" 
-      />
-      <View className="flex-1 justify-between">
-        <View>
-          <Text className="text-lg font-bold text-gray-900 font-dm mb-1" numberOfLines={1}>
-            {item.vendor_name || 'Service Provider'}
-          </Text>
-          <Text className="text-sm text-gray-500 font-dm mb-2" numberOfLines={1}>
-            {item.name}
-          </Text>
+      {/* Image Section */}
+      <View className="relative">
+        <Image
+          source={item.image ? { uri: item.image } : require('../../assets/images/p1.png')}
+          className="w-full h-48"
+          resizeMode="cover"
+        />
+
+        {/* Offer Badge */}
+        <View className="absolute bottom-0 left-0 bg-red-600 px-3 py-1.5 rounded-tr-xl flex-row items-center">
+          <Ionicons name="pricetag" size={12} color="white" />
+          <Text className="text-white text-xs font-bold font-dm ml-1">Flat ₹100 off</Text>
         </View>
-        <View>
-          <View className="flex-row items-center mb-2">
-            <View className="flex-row items-center mr-3">
-              <Ionicons name="star" size={14} color="#FFA500" />
-              <Text className="text-sm text-gray-700 font-semibold font-dm ml-1">4.0</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Ionicons name="location" size={14} color="#9CA3AF" />
-              <Text className="text-sm text-gray-500 font-dm ml-1">Nearby</Text>
-            </View>
+
+        {/* Bookmark Icon */}
+        <TouchableOpacity
+          className="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full items-center justify-center"
+          onPress={(e) => {
+            e.stopPropagation();
+            console.log('Bookmark pressed');
+          }}
+        >
+          <Ionicons name="bookmark-outline" size={18} color="#1F2937" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Content Section */}
+      <View className="p-4">
+        <Text className="text-lg font-bold text-gray-900 font-dm mb-1" numberOfLines={1}>
+          {item.vendor_name || 'Service Provider'}
+        </Text>
+
+        {/* Rating and Reviews */}
+        <View className="flex-row items-center mb-2">
+          <Text className="text-sm text-gray-700 font-semibold font-dm mr-1">
+            {item.rating || '4.0'}
+          </Text>
+          <View className="flex-row mr-2">
+            {[1, 2, 3, 4].map((star) => (
+              <Ionicons key={star} name="star" size={12} color="#FFA500" />
+            ))}
+            <Ionicons name="star-outline" size={12} color="#FFA500" />
           </View>
-          <Text className="text-xl font-bold text-gray-900 font-dm">₹{item.price}</Text>
+          <Text className="text-xs text-gray-500 font-dm">
+            ({item.reviewCount || '120'})
+          </Text>
         </View>
-        {item.is_available === false && (
-          <Text className="text-xs text-red-600 font-dm mt-1">Currently unavailable</Text>
-        )}
+
+        {/* Distance */}
+        <View className="flex-row items-center mb-3">
+          <Ionicons name="location" size={14} color="#9CA3AF" />
+          <Text className="text-sm text-gray-600 font-dm ml-1" numberOfLines={1}>
+            {item.distance || '7'} km, {item.vendor_address || 'Location address...'}
+          </Text>
+        </View>
+
+        {/* Price and Status */}
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xl font-bold text-gray-900 font-dm">
+            ₹{item.price?.toLocaleString('en-IN') || '0'}
+          </Text>
+          {item.is_available === false && (
+            <Text className="text-xs text-red-600 font-semibold font-dm">Unavailable</Text>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -230,7 +366,7 @@ export default function ProviderList({ navigation, route }) {
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <View className="flex-row items-center justify-between px-5 pt-5 pb-4">
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
         >
@@ -254,7 +390,7 @@ export default function ProviderList({ navigation, route }) {
         <Text className="text-sm text-gray-600 font-dm">
           {filteredServices.length} results
         </Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setModalVisible(true)}
           className="flex-row items-center gap-2 px-3 py-2 border border-[#E8E8E8] rounded-full"
         >
@@ -315,20 +451,20 @@ export default function ProviderList({ navigation, route }) {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-1 bg-black/50 justify-end"
-          activeOpacity={1} 
+          activeOpacity={1}
           onPress={() => setModalVisible(false)}
         >
           <View className="bg-white rounded-t-[20px]">
-            <TouchableOpacity 
-              activeOpacity={1} 
+            <TouchableOpacity
+              activeOpacity={1}
               className="p-6"
               onPress={e => e.stopPropagation()}
             >
               <View className="flex-row justify-between items-center mb-6">
                 <Text className="text-2xl font-bold text-gray-900 font-dm">Filters</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setModalVisible(false)}
                   className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -366,23 +502,20 @@ export default function ProviderList({ navigation, route }) {
                   {[1, 2, 3, 4, 5].map((value) => (
                     <TouchableOpacity
                       key={value}
-                      className={`items-center gap-1 ${
-                        rating === value ? '' : ''
-                      }`}
+                      className={`items-center gap-1 ${rating === value ? '' : ''
+                        }`}
                       onPress={() => setRating(value)}
                     >
-                      <View className={`w-10 h-10 rounded-full items-center justify-center ${
-                        rating === value ? 'bg-red-600' : 'bg-gray-100'
-                      }`}>
-                        <Ionicons 
-                          name="star" 
-                          size={20} 
-                          color={rating === value ? '#FFF' : '#9CA3AF'} 
+                      <View className={`w-10 h-10 rounded-full items-center justify-center ${rating === value ? 'bg-red-600' : 'bg-gray-100'
+                        }`}>
+                        <Ionicons
+                          name="star"
+                          size={20}
+                          color={rating === value ? '#FFF' : '#9CA3AF'}
                         />
                       </View>
-                      <Text className={`text-xs font-dm ${
-                        rating === value ? 'text-red-600 font-semibold' : 'text-gray-500'
-                      }`}>{value}</Text>
+                      <Text className={`text-xs font-dm ${rating === value ? 'text-red-600 font-semibold' : 'text-gray-500'
+                        }`}>{value}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

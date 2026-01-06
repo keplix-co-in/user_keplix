@@ -83,6 +83,7 @@ export const routes = {
   EnableTwoFactor: { component: () => require('../components/Security/EnableTwoFactor').default },
   TwoFactorConfirm: { component: () => require('../components/Security/TwoFactorConfirm').default },
   AddEmail: { component: () => require('../components/Security/AddEmail').default },
+  PrivacyPolicy: { component: () => require('../components/Security/PrivacyPolicy').default },
 
   // Other
   Notification: { component: () => require('../components/Notification/Notification').default },

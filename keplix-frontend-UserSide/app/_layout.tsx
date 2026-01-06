@@ -1,10 +1,11 @@
 import "../global.css";
-import React, { useMemo, memo } from "react";
-import { View } from "react-native";
+import React, { useMemo, memo, useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { useFonts } from "expo-font";
 import { createStackNavigator } from "@react-navigation/stack";
 import { routes } from "./routes.config";
 import Footer from "../components/Footer/Footer";
+import { tokenManager } from "../services/tokenManager";
 
 const Stack = createStackNavigator();
 
@@ -25,11 +26,10 @@ const createScreenWrapper = (
         navigationRef.current = props.navigation;
       }
 
-      const screenName = name === 'Login' ? 'Home' : name;
-      setCurrentRoute(screenName);
+      setCurrentRoute(name);
 
       const unsubscribe = props.navigation.addListener('focus', () => {
-        setCurrentRoute(screenName);
+        setCurrentRoute(name);
       });
 
       return unsubscribe;
@@ -44,8 +44,24 @@ export default function RootLayout() {
     "DM": require('./../assets/fonts/DMSans-VariableFont_opsz,wght.ttf')
   });
 
-  const [currentRoute, setCurrentRoute] = React.useState('Home');
+  const [currentRoute, setCurrentRoute] = useState('Login');
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
   const navigationRef = React.useRef<any>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await tokenManager.getAccessToken();
+        console.log('App Launch - Auth Token:', token ? 'Found' : 'Not Found');
+        setInitialRoute(token ? 'Homepage' : 'Login');
+        if (token) setCurrentRoute('Homepage');
+      } catch (error) {
+        console.error('Auth Check Error:', error);
+        setInitialRoute('Login');
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Memoize screen options to prevent re-creation
   const screenOptions = useMemo(() => ({
@@ -62,7 +78,7 @@ export default function RootLayout() {
       return (
         <Stack.Screen
           key={name}
-          name={name === 'Login' ? 'Home' : name}
+          name={name}
           component={WrappedComponent}
         />
       );
@@ -76,8 +92,12 @@ export default function RootLayout() {
     console.log('Navigation Ref:', navigationRef.current ? 'Available' : 'Not Available');
   }, [currentRoute]);
 
-  if (!fontsLoaded) {
-    return null;
+  if (!fontsLoaded || !initialRoute) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#DC2626" />
+      </View>
+    );
   }
 
   const shouldShowFooter = FOOTER_SCREENS.includes(currentRoute);
@@ -85,8 +105,9 @@ export default function RootLayout() {
   return (
     <View style={{ flex: 1 }}>
       <Stack.Navigator
+        id="RootStack"
         screenOptions={screenOptions}
-        initialRouteName="ScreenTester"
+        initialRouteName={initialRoute}
       >
         {routeScreens}
       </Stack.Navigator>

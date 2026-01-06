@@ -42,19 +42,33 @@ export default function SignUp({ navigation }) {
         role: 'user', // User-side signup
       });
 
-      // Send email verification OTP
-      await authAPI.sendEmailOTP(email.trim());
-
-      Alert.alert(
-        'Success',
-        'Account created! Please check your email for verification code.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate("EmailVerify", { email: email.trim() }),
-          },
-        ]
-      );
+      try {
+        // Send email verification OTP
+        await authAPI.sendEmailOTP(email.trim());
+        
+        Alert.alert(
+          'Success',
+          'Account created! Please check your email for verification code.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate("EmailVerify", { email: email.trim() }),
+            },
+          ]
+        );
+      } catch (otpError) {
+        console.error('OTP Send error:', otpError);
+        Alert.alert(
+          'Account Created',
+          'Your account was created successfully, but we failed to send the verification email. Please try logging in to resend the verification code.',
+          [
+            {
+              text: 'Go to Login',
+              onPress: () => navigation.navigate("SignIn"),
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.error('Signup error:', error);
       

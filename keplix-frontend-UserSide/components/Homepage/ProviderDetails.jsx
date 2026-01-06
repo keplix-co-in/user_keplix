@@ -7,8 +7,8 @@ import { servicesAPI } from '../../services/api';
 const ServiceCard = ({ icon, title, price }) => (
   <View className="border-2 border-[#E2E2E2] rounded-2xl p-4 items-center mr-3 w-[180px] h-[120px]">
     <View className="flex-row items-center mb-2">
-    <MaterialCommunityIcons name={icon} size={30} color="#000" />
-    <Text className="text-xl font-dm font-medium my-2 mx-1">{title}</Text>
+      <MaterialCommunityIcons name={icon} size={30} color="#000" />
+      <Text className="text-xl font-dm font-medium my-2 mx-1">{title}</Text>
     </View>
     <Text className="bg-[#45B7B7] text-white px-6 py-1.5 rounded-lg text-base font-semibold font-dm">₹{price}</Text>
   </View>
@@ -17,7 +17,7 @@ const ServiceCard = ({ icon, title, price }) => (
 const RatingStars = ({ rating, count }) => {
   return (
     <View className="flex-row items-center mb-5">
-      <Text className="mr-2 text-base font-semibold font-dm text-gray-700">Ratings: </Text>  
+      <Text className="mr-2 text-base font-semibold font-dm text-gray-700">Ratings: </Text>
       <Text className="mr-1 text-base font-bold font-dm text-gray-900">{rating}</Text>
       {[1, 2, 3, 4, 5].map((star) => (
         <Ionicons
@@ -32,7 +32,7 @@ const RatingStars = ({ rating, count }) => {
   );
 };
 
-export default function ProviderDetails ({ navigation, route }) {
+export default function ProviderDetails({ navigation, route }) {
   const [service, setService] = useState(route?.params?.service || null);
   const [loading, setLoading] = useState(!route?.params?.service);
   const [relatedServices, setRelatedServices] = useState([]);
@@ -98,33 +98,37 @@ export default function ProviderDetails ({ navigation, route }) {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="absolute top-0 left-0 right-0 z-10 flex-row items-center justify-between p-5">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => navigation.goBack()}
             className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-lg"
           >
             <Ionicons name="arrow-back-outline" size={24} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-lg">
+            <Ionicons name="bookmark-outline" size={24} color="#000" />
           </TouchableOpacity>
         </View>
 
         <Image
           source={service.image ? { uri: service.image } : require('../../assets/images/p1.png')}
           className="w-full h-[300px]"
+          resizeMode="cover"
         />
 
         <View className="p-5">
           <Text className="text-2xl font-bold font-dm mb-3 text-gray-900">{service.vendor_name || 'Service Provider'}</Text>
-          
+
           <View className="flex-row justify-between items-center mb-5">
             <Text className="text-lg text-gray-600 font-dm flex-1">{service.name}</Text>
             <View className="px-4 py-2 bg-red-50 rounded-full">
-              <Text className="text-xl font-bold font-dm text-red-600">₹{service.price}</Text>
+              <Text className="text-xl font-bold font-dm text-red-600">₹{service.price?.toLocaleString('en-IN')}</Text>
             </View>
           </View>
 
-          <RatingStars rating={4.0} count={60} />
+          <RatingStars rating={service.rating || 4.0} count={service.reviewCount || 60} />
 
           {service.description && (
             <View className="mb-6">
@@ -203,8 +207,8 @@ export default function ProviderDetails ({ navigation, route }) {
       </ScrollView>
 
       {service.is_available && (
-        <TouchableOpacity 
-          className="bg-red-600 mx-5 mb-5 py-4 rounded-full items-center" 
+        <TouchableOpacity
+          className="bg-red-600 mx-5 mb-5 py-4 rounded-full items-center"
           onPress={() => navigation.navigate("BookSlot", { service })}
         >
           <Text className="text-white text-base font-bold font-dm">Check Schedule</Text>
