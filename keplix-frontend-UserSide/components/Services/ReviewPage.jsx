@@ -21,7 +21,8 @@ export default function ReviewPage({ route, navigation }) {
   const params = route.params || {};
   const date = params.date;
   const time = params.time;
-  const serviceData = params.service || {};
+  const dateRaw = params.dateRaw;
+  const serviceData = params.service || params.serviceData || {};
   const vendorData = params.vendor || {};
 
   useEffect(() => {
@@ -72,15 +73,27 @@ export default function ReviewPage({ route, navigation }) {
 
     setCreating(true);
     try {
+      // Convert time to HH:MM format if it is AM/PM
+      let formattedTime = time;
+      if (time && (time.includes('AM') || time.includes('PM'))) {
+          const [timePart, modifier] = time.split(' ');
+          let [hours, minutes] = timePart.split(':');
+          if (hours === '12') {
+              hours = '00';
+          }
+          if (modifier === 'PM') {
+              hours = parseInt(hours, 10) + 12;
+          }
+          formattedTime = `${hours}:${minutes}`;
+      }
+
       const bookingData = {
         user: userData.id,
-        vendor: vendorData.id || 1, // Default vendor if not provided
-        service: serviceData.id || 1, // Default service if not provided
-        scheduled_date: date,
-        scheduled_time: time,
+        service_id: serviceData.id || 1, // Send service_id for backend
+        booking_date: dateRaw || date, // Use raw date (YYYY-MM-DD) if available
+        booking_time: formattedTime, // Use 24h format
         notes: note.trim(),
         status: 'pending',
-        total_cost: serviceData.price || 10499,
       };
 
       const response = await bookingsAPI.createBooking(userData.id, bookingData);

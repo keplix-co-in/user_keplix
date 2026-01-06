@@ -17,49 +17,73 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bookingsAPI, servicesAPI } from '../../services/api';
 import locationService from '../../services/locationService';
 
+// Backend URL
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  if (typeof imagePath === 'string' && imagePath.startsWith('http')) return { uri: imagePath };
+  if (typeof imagePath === 'string') return { uri: `${BASE_URL}${imagePath}` };
+  return imagePath; 
+};
+
 // Memoized workshop card component
-const WorkshopCard = memo(({ imagePath, navigation }) => (
-  <TouchableOpacity
-    className="w-64 mr-3 bg-white border border-gray-200 rounded-2xl overflow-hidden"
-    onPress={() => navigation.navigate("ProviderDetails")}
-  >
-    <View className="relative">
-      <Image
-        source={imagePath}
-        className="w-full h-28"
-        resizeMode="cover"
-      />
-      <View className="absolute top-2 right-2 bg-red-600 px-2 py-1 rounded-full flex-row items-center">
-        <Ionicons name="pricetag" size={10} color="white" />
-        <Text className="text-white text-[10px] font-bold font-dm ml-1">Flat ₹100 off</Text>
-      </View>
-      <TouchableOpacity className="absolute top-2 left-2 w-7 h-7 bg-white/90 rounded-full items-center justify-center">
-        <Ionicons name="bookmark-outline" size={16} color="#DC2626" />
-      </TouchableOpacity>
-    </View>
-    <View className="p-2.5">
-      <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
-        Dwarka mor service
-      </Text>
-      <View className="flex-row items-center mt-1">
-        <Text className="text-xs text-gray-700 font-dm">4.0</Text>
-        <View className="flex-row ml-1">
-          {[1,2,3,4].map(i => (
-            <Ionicons key={i} name="star" size={10} color="#FFA500" />
-          ))}
-          <Ionicons name="star-outline" size={10} color="#FFA500" />
+const WorkshopCard = memo(({ item, navigation }) => {
+  const imageSource = getImageUrl(item?.image_url) || require("../../assets/images/r1.jpg");
+  
+  return (
+    <TouchableOpacity
+      className="w-64 mr-3 bg-white border border-gray-200 rounded-2xl overflow-hidden"
+      onPress={() => navigation.navigate("ProviderDetails", { provider: item })}
+    >
+      <View className="relative">
+        <Image
+          source={imageSource}
+          className="w-full h-28"
+          resizeMode="cover"
+        />
+        <View className="absolute bottom-0 left-0 bg-red-600 px-3 py-1 rounded-tr-xl flex-row items-center">
+          <Ionicons name="pricetag" size={10} color="white" />
+          <Text className="text-white text-[10px] font-bold font-dm ml-1">
+            Ends in 5h 22m
+          </Text>
         </View>
-        <Text className="text-xs text-gray-500 font-dm ml-1">(120)</Text>
+        <TouchableOpacity className="absolute top-2 right-2 w-7 h-7 bg-white/20 rounded-full items-center justify-center backdrop-blur-sm">
+          <Ionicons name="bookmark-outline" size={16} color="white" />
+        </TouchableOpacity>
       </View>
-      <View className="flex-row items-center mt-1.5">
-        <Ionicons name="location" size={12} color="#666" />
-        <Text className="text-[10px] text-gray-600 font-dm ml-1" numberOfLines={1}>
-          7 km, Location address...
+      <View className="p-3">
+        <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
+          {item?.vendor_name || 'Workshop Name'}
         </Text>
+        <Text className="text-xs text-gray-500 font-dm mb-1" numberOfLines={1}>
+          {item?.name || 'Service Name'}
+        </Text>
+        <View className="flex-row items-center mt-1">
+          <Text className="text-xs text-gray-700 font-dm">4.0</Text>
+          <View className="flex-row ml-1">
+            {[1, 2, 3, 4].map(i => (
+              <Ionicons key={i} name="star" size={10} color="#FFA500" />
+            ))}
+            <Ionicons name="star-outline" size={10} color="#FFA500" />
+          </View>
+          <Text className="text-xs text-gray-500 font-dm ml-1">(120)</Text>
+        </View>
+        <View className="flex-row items-center mt-1.5 justify-between">
+          <View className="flex-row items-center">
+            <Ionicons name="location" size={12} color="#666" />
+            <Text className="text-[10px] text-gray-600 font-dm ml-1" numberOfLines={1}>
+              2.5 km nearby
+            </Text>
+          </View>
+          <Text className="text-sm font-bold font-dm text-gray-900">
+             ₹{item?.price ? parseFloat(item.price).toLocaleString('en-IN') : '0'}
+          </Text>
+        </View>
       </View>
-    </View>
-  </TouchableOpacity>
-));
+    </TouchableOpacity>
+  );
+});
 
 WorkshopCard.displayName = 'WorkshopCard';
 
@@ -70,10 +94,10 @@ const FeaturedServiceItem = memo(({ item, onPress }) => (
     style={{ width: '23%' }}
     onPress={onPress}
   >
-    <View className="w-full aspect-square bg-white border border-gray-200 rounded-2xl items-center justify-center mb-1.5">
-      <MaterialCommunityIcons name={item.icon} size={32} color="#DC2626" />
+    <View className="w-full aspect-square bg-gray-50 rounded-2xl items-center justify-center mb-2">
+      <MaterialCommunityIcons name={item.icon} size={28} color="#DC2626" />
     </View>
-    <Text className="text-[9px] text-gray-700 text-center font-dm w-full" numberOfLines={2} style={{ lineHeight: 11 }}>
+    <Text className="text-[10px] text-gray-700 text-center font-medium font-dm w-full leading-3" numberOfLines={2}>
       {item.label}
     </Text>
   </TouchableOpacity>
@@ -87,6 +111,8 @@ export default function Homepage({ navigation }) {
   const [userImage, setUserImage] = useState(null);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [nearbyServices, setNearbyServices] = useState([]); // State for nearby workshops
+  const [loadingNearby, setLoadingNearby] = useState(true);
   const [userId, setUserId] = useState(null);
   const [locationText, setLocationText] = useState('Set your location');
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
@@ -110,16 +136,16 @@ export default function Homepage({ navigation }) {
 
   const banners = useMemo(() => [
     {
-      color: "#F59E0B",
-      iconBgColor: "#FCD34D",
-      discountText: "24/7",
-      discountDescription: "Delivery service",
+      color: "#111827", // Dark background
+      iconBgColor: "#1F2937",
+      discountText: "15%", // Matches screenshot
+      discountDescription: "discount on the first order.",
     },
     {
-      color: "#DC2626",
-      iconBgColor: "#EF4444",
-      discountText: "15%",
-      discountDescription: "discount on the first order.",
+      color: "#111827",
+      iconBgColor: "#1F2937",
+      discountText: "24/7",
+      discountDescription: "Delivery service",
     },
   ], []);
 
@@ -128,14 +154,58 @@ export default function Homepage({ navigation }) {
   // Fetch user data and bookings on mount
   useEffect(() => {
     fetchUserData();
+    fetchNearbyServices();
   }, []);
 
   useEffect(() => {
     if (userId) {
       fetchUpcomingBookings();
+    } else {
+      setUpcomingBookings([]);
+      setLoadingBookings(false);
     }
   }, [userId]);
 
+  const fetchNearbyServices = async () => {
+    try {
+      setLoadingNearby(true);
+      const response = await servicesAPI.getAllServices();
+      // Only take first 10 for now
+      setNearbyServices(response.data.slice(0, 10));
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      setNearbyServices([]);
+    } finally {
+      setLoadingNearby(false);
+    }
+  };
+
+  const mockBookings = [
+    {
+      id: 'mock-1',
+      service: {
+        name: 'Engine Repair',
+        vendor_name: 'Dwarka mor service',
+        image: require('../../assets/images/r1.jpg'), // Ensure this exists or use a URI
+      },
+      booking_date: '2024-06-26',
+      booking_time: '16:30',
+      price: 10499,
+      status: 'confirmed'
+    },
+    {
+      id: 'mock-2',
+      service: {
+        name: 'Car Cleaning',
+        vendor_name: 'Super Clean Auto',
+        image: require('../../assets/images/r.png'),
+      },
+      booking_date: '2024-06-28',
+      booking_time: '10:00',
+      price: 599,
+      status: 'pending'
+    }
+  ];
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveDot((prevDot) => (prevDot + 1) % banners.length);
@@ -147,7 +217,7 @@ export default function Homepage({ navigation }) {
   // Load location data on mount and when screen focuses
   useEffect(() => {
     loadLocationData();
-    
+
     // Add focus listener to reload location when returning to this screen
     const unsubscribe = navigation.addListener('focus', () => {
       console.log('Homepage focused, reloading location');
@@ -199,22 +269,26 @@ export default function Homepage({ navigation }) {
     try {
       setLoadingBookings(true);
       const response = await bookingsAPI.getUserBookings(userId);
-      
+
       // Filter upcoming bookings (confirmed or pending, future dates)
       const now = new Date();
       const upcoming = response.data
         .filter(booking => {
           const bookingDate = new Date(booking.booking_date);
-          return (booking.status === 'pending' || booking.status === 'confirmed') && 
-                 bookingDate >= now;
+          return (booking.status === 'pending' || booking.status === 'confirmed') &&
+            bookingDate >= now;
         })
         .sort((a, b) => new Date(a.booking_date) - new Date(b.booking_date))
         .slice(0, 5); // Get only first 5
-      
-      setUpcomingBookings(upcoming);
+
+      if (upcoming.length > 0) {
+        setUpcomingBookings(upcoming);
+      } else {
+        setUpcomingBookings([]);
+      }
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      setUpcomingBookings([]);
+      setUpcomingBookings([]); 
     } finally {
       setLoadingBookings(false);
     }
@@ -247,51 +321,57 @@ export default function Homepage({ navigation }) {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: currentBanner.color }}>
-      <ScrollView showsVerticalScrollIndicator={false} className="bg-gray-50" contentContainerStyle={{ paddingTop: insets.top }}>
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 20 }}>
         {/* Header with Location and Banner */}
         <View style={{ backgroundColor: currentBanner.color }}>
           {/* Top Bar with Location */}
           <View className="px-4 pt-2 pb-2 flex-row justify-between items-center">
-            <TouchableOpacity 
-              className="flex-row items-center bg-white/20 px-3 py-1.5 rounded-full flex-1 mr-3"
+            <TouchableOpacity
+              className="flex-row items-center bg-gray-800/80 px-4 py-2 rounded-full flex-1 mr-3"
               onPress={handleLocationPress}
               activeOpacity={0.7}
             >
-              <Ionicons name="location-sharp" size={14} color="white" />
-              <Text className="text-white text-xs font-dm ml-1 flex-1" numberOfLines={1}>
+              <Ionicons name="location-sharp" size={14} color="#EF4444" />
+              <Text className="text-gray-200 text-xs font-dm ml-2 flex-1" numberOfLines={1}>
                 {locationText}
               </Text>
-              <Ionicons name="chevron-down" size={14} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate("SearchPage")}
-              className="w-9 h-9 bg-white/20 rounded-full items-center justify-center mr-2"
-            >
-              <Ionicons name="search-outline" size={18} color="white" />
-            </TouchableOpacity>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => navigation.navigate("SearchPage")}
+                className="w-10 h-10 bg-gray-800/80 rounded-full items-center justify-center"
+              >
+                <Ionicons name="search-outline" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="w-10 h-10 bg-gray-800/80 rounded-full items-center justify-center"
+                onPress={() => navigation.navigate("HamburgerMenu")}
+              >
+                <MaterialCommunityIcons name="dots-vertical" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Banner Discount Section */}
-          <View className="px-5 pt-2 pb-6">
+          <View className="px-5 pt-8 pb-10">
             <View className="flex-row items-center">
-              <Text className="text-white font-bold font-dm" style={{ fontSize: 48, lineHeight: 52 }}>
+              <Text className="text-white font-bold font-dm" style={{ fontSize: 56, lineHeight: 60 }}>
                 {currentBanner.discountText}
               </Text>
               <View className="ml-4 flex-1">
-                <Text className="text-white font-medium font-dm" style={{ fontSize: 16, lineHeight: 20 }}>
+                <Text className="text-white font-medium font-dm" style={{ fontSize: 18, lineHeight: 24 }}>
                   {currentBanner.discountDescription}
                 </Text>
               </View>
             </View>
-            
+
             {/* Dots Indicator */}
-            <View className="flex-row mt-2 gap-1">
+            <View className="flex-row mt-6 gap-1.5">
               {banners.map((_, index) => (
                 <View
                   key={index}
-                  className={`h-1 rounded-full ${
-                    index === activeDot ? 'w-4 bg-white' : 'w-1 bg-white/50'
-                  }`}
+                  className={`h-1.5 rounded-full ${index === activeDot ? 'w-5 bg-red-500' : 'w-1.5 bg-gray-600'
+                    }`}
                 />
               ))}
             </View>
@@ -299,7 +379,7 @@ export default function Homepage({ navigation }) {
         </View>
 
         {/* Featured Services */}
-        <View className="bg-white px-4 pt-5 pb-2 -mt-5 rounded-t-3xl">
+        <View className="bg-white px-4 pt-5 pb-2  rounded-t-3xl">
           <Text className="text-base font-semibold font-dm text-gray-900 mb-3">Featured Services</Text>
 
           <View className="flex-row flex-wrap justify-between">
@@ -314,39 +394,61 @@ export default function Homepage({ navigation }) {
         </View>
 
         {/* Upcoming Services */}
-        <View className="bg-white px-4 py-4 mt-2">
+        <View className="bg-white px-4 py-4">
           <Text className="text-base font-semibold font-dm text-gray-900 mb-3">Upcoming services</Text>
-          
+
           {loadingBookings ? (
             <View className="bg-white border border-gray-200 rounded-2xl p-4 items-center">
               <ActivityIndicator size="small" color="#DC2626" />
               <Text className="text-gray-500 text-sm font-dm mt-2">Loading...</Text>
             </View>
           ) : upcomingBookings.length > 0 ? (
-            upcomingBookings.slice(0, 1).map((booking) => (
-              <TouchableOpacity
+            upcomingBookings.slice(0, 3).map((booking) => (
+              <View
                 key={booking.id}
-                className="bg-white border border-gray-200 rounded-2xl p-3 flex-row items-center"
-                onPress={() => navigation.navigate("BookingDetails", { booking })}
+                className="bg-white border border-gray-200 rounded-2xl p-3 mb-3"
               >
-                <View className="w-10 h-10 bg-gray-100 rounded-xl items-center justify-center mr-3">
-                  <MaterialCommunityIcons name="wrench" size={22} color="#DC2626" />
+                {/* Top Section: Image and Details */}
+                <View className="flex-row">
+                  <Image
+                    source={getImageUrl(booking.service?.image_url) || require('../../assets/images/r1.jpg')}
+                    className="w-20 h-20 rounded-xl bg-gray-200"
+                    resizeMode="cover"
+                  />
+                  <View className="flex-1 ml-3 justify-between py-1">
+                    <View>
+                      <Text className="text-base font-bold font-dm text-gray-900" numberOfLines={1}>
+                        {booking.service?.name || 'Service Name'}
+                      </Text>
+                      <Text className="text-xs text-gray-500 font-dm" numberOfLines={1}>
+                        {booking.service?.vendor_name || 'Vendor Name'}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text className="text-xs text-gray-600 font-medium font-dm">
+                        {formatDate(booking.booking_date)} • {formatTime(booking.booking_time)}
+                      </Text>
+                      <Text className="text-sm font-bold font-dm text-gray-900 mt-0.5">
+                        ₹{booking.service?.price || booking.price || '0'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold font-dm text-gray-900" numberOfLines={1}>
-                    {booking.service?.name || 'Detailing'}
-                  </Text>
-                  <Text className="text-xs text-gray-500 font-dm" numberOfLines={1}>
-                    {booking.service?.vendor_name || 'Dwarka mor repair service...'}
-                  </Text>
-                  <Text className="text-xs text-red-600 font-medium font-dm mt-0.5">
-                    {formatDate(booking.booking_date)} | {formatTime(booking.booking_time)}
-                  </Text>
+
+                {/* Bottom Section: Actions */}
+                <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <TouchableOpacity onPress={() => console.log('Need help')}>
+                    <Text className="text-xs text-gray-500 font-medium font-dm text-underline">Need help?</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    className="bg-red-600 px-4 py-2 rounded-lg"
+                    onPress={() => navigation.navigate("BookingDetails", { booking })}
+                  >
+                    <Text className="text-white text-xs font-bold font-dm">View details</Text>
+                  </TouchableOpacity>
                 </View>
-                <View className="w-9 h-9 bg-red-600 rounded-full items-center justify-center">
-                  <Ionicons name="arrow-forward" size={18} color="white" />
-                </View>
-              </TouchableOpacity>
+              </View>
             ))
           ) : (
             <View className="bg-white border border-gray-200 rounded-2xl p-4 items-center">
@@ -357,7 +459,7 @@ export default function Homepage({ navigation }) {
         </View>
 
         {/* Workshops Nearby */}
-        <View className="bg-white px-4 py-4 mt-2 mb-20">
+        <View className="bg-white px-4 py-4">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-base font-semibold font-dm text-gray-900">Workshops Nearby</Text>
             <TouchableOpacity onPress={() => navigation.navigate("ProviderList")}>
@@ -365,40 +467,19 @@ export default function Homepage({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-4 px-4">
-            <WorkshopCard imagePath={require("../../assets/images/r.png")} navigation={navigation} />
-            <WorkshopCard imagePath={require("../../assets/images/r1.jpg")} navigation={navigation} />
-          </ScrollView>
+          {loadingNearby ? (
+            <ActivityIndicator size="small" color="#DC2626" />
+          ) : nearbyServices.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-4 px-4">
+              {nearbyServices.map((service, index) => (
+                <WorkshopCard key={service.id || index} item={service} navigation={navigation} />
+              ))}
+            </ScrollView>
+          ) : (
+            <Text className="text-gray-500 text-sm font-dm">No workshops found nearby</Text>
+          )}
         </View>
       </ScrollView>
-
-      {/* <View style={styles.bottomNav}>
-        <NavItem
-          icon="home"
-          text="Home"
-          active
-          navigation={navigation}
-          targetScreen="HomePage"
-        />
-        <NavItem
-          icon="grid"
-          text="Services"
-          navigation={navigation}
-          targetScreen="ServicesCard"
-        />
-        <NavItem
-          icon="document-text"
-          text="Bookings"
-          navigation={navigation}
-          targetScreen="BookingList"
-        />
-        <NavItem
-          icon="person"
-          text="Profile"
-          navigation={navigation}
-          targetScreen="Profile"
-        />
-      </View> */}
     </SafeAreaView>
   );
 }
@@ -410,12 +491,3 @@ const ServiceItem = ({ icon, text, onPress }) => (
   </TouchableOpacity>
 );
 
-// const NavItem = ({ icon, text, active, navigation, targetScreen }) => (
-//   <TouchableOpacity
-//     style={styles.navItem}
-//     onPress={() => navigation.navigate(targetScreen)}
-//   >
-//     <Ionicons name={icon} size={34} color={active ? "red" : "#666"} />
-//     <Text style={[styles.navText, active && styles.activeNavText]}>{text}</Text>
-//   </TouchableOpacity>
-// );

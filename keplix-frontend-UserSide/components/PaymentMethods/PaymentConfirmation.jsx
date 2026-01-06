@@ -48,12 +48,11 @@ const PaymentConfirmation = ({ navigation, route }) => {
         booking: bookingId,
         user: userId,
         amount: parseFloat(amount),
-        payment_method: paymentMethod || 'card',
-        transaction_id: transactionId || `TXN${Date.now()}`,
-        status: 'completed',
+        method: paymentMethod || 'card',
+        status: 'paid',
       };
 
-      const response = await paymentsAPI.createPayment(paymentData);
+      const response = await paymentsAPI.createPayment(bookingId, paymentData);
       setPayment(response.data);
     } catch (error) {
       console.error('Error creating payment record:', error);

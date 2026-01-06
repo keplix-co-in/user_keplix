@@ -1,61 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as tokenManager from '../../services/tokenManager';
 
-const SettingsItem = ({ icon, title, navigation, targetScreen }) => (
-  <TouchableOpacity className="flex-row items-center justify-between px-4 py-4 border-b border-gray-100" onPress={() => navigation.navigate(targetScreen)}>
-    <View className="flex-row items-center gap-3">
-      <View className="w-10 h-10 bg-gray-100 rounded-xl items-center justify-center">
-        <Ionicons name={icon} size={20} color="#374151" />
+const MenuItem = ({ icon, iconLib = 'Ionicons', title, onPress, color = '#374151' }) => {
+  const IconComponent = iconLib === 'MaterialCommunityIcons' ? MaterialCommunityIcons : Ionicons;
+
+  return (
+    <TouchableOpacity
+      className="flex-row items-center px-5 py-4 border-b border-gray-100"
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center mr-4">
+        <IconComponent name={icon} size={20} color={color} />
       </View>
-      <Text className="text-base text-gray-900 font-dm">{title}</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-  </TouchableOpacity>
-);
+      <Text className="flex-1 text-base font-dm text-gray-900">{title}</Text>
+      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+  );
+};
 
-const NavItem = ({ icon, text, active, navigation, targetScreen }) => (
-  <TouchableOpacity 
-    className="items-center" 
-    onPress={() => navigation.navigate(targetScreen)}
-  >
-    <Ionicons 
-      name={icon} 
-      size={44} 
-      color={active ? "#DC2626" : "#666"} 
-    />
-    <Text className={`text-xs mt-1 ${active ? 'text-red-500' : 'text-gray-600'}`}>{text}</Text>
-  </TouchableOpacity>
-);
-
-
-export default function HamburgerMenu({navigation}) {
-  const [userName, setUserName] = useState('User');
-  const [userPhone, setUserPhone] = useState('');
-  const [userImage, setUserImage] = useState(null);
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user_data');
-      if (userData) {
-        const user = JSON.parse(userData);
-        setUserName(user.name || user.first_name || 'User');
-        setUserPhone(user.phone || user.phone_number || '');
-        setUserImage(user.profile_picture || user.image);
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
+export default function HamburgerMenu({ navigation }) {
+  const handleAboutUs = () => {
+    Alert.alert(
+      'About Us',
+      'Keplix - Your trusted car service platform. We connect you with the best service providers in your area.',
+      [{ text: 'OK' }]
+    );
   };
 
-  const handleLogout = () => {
+  const handleInviteFriend = () => {
+    Alert.alert(
+      'Invite a Friend',
+      'Share Keplix with your friends and earn rewards!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Share', onPress: () => console.log('Share pressed') }
+      ]
+    );
+  };
+
+  const handleHelpSupport = () => {
+    navigation.navigate('Support');
+  };
+
+  const handleReportIssue = () => {
+    navigation.navigate('Feedback');
+  };
+
+  const handleProfile = () => {
+    navigation.navigate('Profile');
+  };
+
+  const handleNotifications = () => {
+    navigation.navigate('Notification');
+  };
+
+  const handleSecurity = () => {
+    navigation.navigate('Security');
+  };
+
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -66,82 +73,112 @@ export default function HamburgerMenu({navigation}) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await tokenManager.clearTokens();
-              await AsyncStorage.clear();
+              await AsyncStorage.removeItem('user_data');
+              await AsyncStorage.removeItem('auth_token');
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
               });
             } catch (error) {
-              console.error('Error during logout:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
+              console.error('Error logging out:', error);
             }
-          },
-        },
+          }
+        }
       ]
     );
   };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="flex-row items-center px-5 pt-5 pb-4">
-        <TouchableOpacity 
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+          className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center"
         >
-          <Ionicons name="arrow-back-outline" size={24} color="#000" />
+          <Ionicons name="close" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <View className="flex-1 items-center pr-10">
-          <Text className="text-2xl font-semibold text-gray-900 font-dm">Menu</Text>
-        </View>
+
+        <Text className="text-lg font-bold text-gray-900 font-dm">Menu</Text>
+
+        <View className="w-10" />
       </View>
 
-      {/* Profile Section */}
-      <TouchableOpacity 
-        className="flex-row items-center justify-between p-5 mx-4 mb-6 bg-gray-50 border border-[#E8E8E8] rounded-2xl" 
-        onPress={()=> navigation.navigate("UserProfile")}
-      >
-        <View className="flex-row items-center gap-4">
-          <Image 
-            source={userImage ? { uri: userImage } : require('../../assets/images/3.jpeg')}
-            className="w-16 h-16 rounded-xl"
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Main Menu Section */}
+        <View className="mt-2">
+          <MenuItem
+            icon="information-circle-outline"
+            title="About Us"
+            onPress={handleAboutUs}
+            color="#DC2626"
           />
-          <View>
-            <Text className="text-xl font-bold text-gray-900 font-dm">{userName}</Text>
-            {userPhone && (
-              <Text className="text-sm text-gray-500 mt-1 font-dm">{userPhone}</Text>
-            )}
-          </View>
+
+          <MenuItem
+            icon="person-add-outline"
+            title="Invite a Friend"
+            onPress={handleInviteFriend}
+            color="#10B981"
+          />
+
+          <MenuItem
+            icon="help-circle-outline"
+            title="Help & Support"
+            onPress={handleHelpSupport}
+            color="#3B82F6"
+          />
+
+          <MenuItem
+            icon="flag-outline"
+            title="Report an Issue"
+            onPress={handleReportIssue}
+            color="#F59E0B"
+          />
         </View>
-        <View className="w-8 h-8 rounded-full bg-red-600 items-center justify-center">
-          <Ionicons name="chevron-forward" size={18} color="#FFF" />
+
+        {/* Account Section */}
+        <View className="mt-4">
+          <Text className="px-5 py-2 text-xs font-semibold text-gray-500 uppercase font-dm">
+            Account
+          </Text>
+
+          <MenuItem
+            icon="person-outline"
+            title="My Profile"
+            onPress={handleProfile}
+          />
+
+          <MenuItem
+            icon="notifications-outline"
+            title="Notifications"
+            onPress={handleNotifications}
+          />
+
+          <MenuItem
+            icon="shield-checkmark-outline"
+            title="Security"
+            onPress={handleSecurity}
+          />
         </View>
-      </TouchableOpacity>
 
-      {/* Settings Items */}
-      <Text className="text-lg font-semibold text-gray-900 px-4 mb-3 font-dm">Settings</Text>
-            <View className="flex-1">
-              <SettingsItem icon="card" title="Payment Methods"  navigation={navigation} targetScreen='UpdatePayment' />
-              <SettingsItem icon="time-outline" title="Booking History" navigation={navigation} targetScreen='BookingList'/>
-              <SettingsItem icon="star" title="My Reviews"  navigation={navigation} targetScreen='ReviewList' />
-              <SettingsItem icon="shield" title="Security Settings" navigation={navigation} targetScreen='Security'/>
-              <SettingsItem icon="notifications" title="Notification Settings" navigation={navigation} targetScreen='Notification' />
-              <SettingsItem icon="help-circle-outline" title="Support & Help" navigation={navigation} targetScreen='Support'/>
-            </View>
+        {/* Logout */}
+        <View className="mt-6 px-5 pb-6">
+          <TouchableOpacity
+            className="bg-red-50 py-4 rounded-2xl flex-row items-center justify-center border border-red-100"
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+            <Text className="text-red-600 font-bold font-dm ml-2">Logout</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Logout Button */}
-            <TouchableOpacity 
-              className="flex-row items-center px-6 py-5 mx-4 mt-auto mb-6 bg-red-50 border border-red-100 rounded-2xl"
-              onPress={handleLogout}
-            >
-              <View className="w-10 h-10 bg-red-600 rounded-xl items-center justify-center">
-                <Ionicons name="log-out-outline" size={20} color="#FFF" />
-              </View>
-              <Text className="flex-1 text-center text-lg font-semibold text-red-600 font-dm">Logout</Text>
-            </TouchableOpacity>
-
+        {/* App Info */}
+        <View className="items-center pb-8 px-5">
+          <Text className="text-xs text-gray-400 font-dm">Keplix v1.0.0</Text>
+          <Text className="text-xs text-gray-400 font-dm mt-1">© 2024 Keplix. All rights reserved.</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-};
-
-
+}

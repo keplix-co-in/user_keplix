@@ -105,7 +105,14 @@ export default function UserProfile({ navigation }) {
       if (profilePicture && profilePicture.startsWith('file://')) {
         // Note: For actual image upload, you'd need to use FormData
         // For now, we'll skip the image upload and just update other fields
-        console.log('Image upload would happen here');
+        // console.log('Image upload would happen here');
+        // const formData = new FormData();
+        // formData.append('profile_picture', {
+        //   uri: profilePicture,
+        //   name: 'profile.jpg',
+        //   type: 'image/jpeg',
+        // });
+        // await authAPI.updateProfilePicture(formData);
       }
 
       const response = await authAPI.updateProfile(updateData);

@@ -161,14 +161,7 @@ export default function Profile({ navigation }) {
       <ScrollView className="flex-1 bg-white" showsVerticalScrollIndicator={false}>
         {/* Header with Red Background */}
         <View className="bg-red-600 pt-3 pb-32">
-          <View className="px-5">
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              className="w-11 h-11 rounded-full border-2 border-white items-center justify-center"
-            >
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          {/* Header Bar */}
         </View>
 
         {/* Profile Section - Overlapping with Curved Top */}

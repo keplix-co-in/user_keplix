@@ -5,355 +5,207 @@ import {
   TouchableOpacity,
   StatusBar,
   Modal,
-  Pressable,
   ActivityIndicator,
-  Alert,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { bookingsAPI } from '../../services/api';
 
 export default function RescheduleBooking({ navigation, route }) {
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState('26'); 
+  const [selectedTime, setSelectedTime] = useState('6:00PM');
+  const [currentDate, setCurrentDate] = useState(new Date(2024, 5, 26)); 
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Get booking data from navigation params
-  const booking = route?.params?.booking || null; 
+
+  const booking = route?.params?.booking || {};
 
   const formatMonthYear = (date) => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
 
   const handlePreviousMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(prevDate.getMonth() - 1);
-      return newDate;
-    });
-    setSelectedDate(null); 
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setSelectedDate(null);
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(prevDate.getMonth() + 1);
-      return newDate;
-    });
-    setSelectedDate(null); 
-  };
-
-  const handleProceed = () => {
-    if (selectedDate && selectedTime) {
-      setModalVisible(true);
-    }
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setSelectedDate(null);
   };
 
   const handleConfirm = async () => {
-    try {
-      setLoading(true);
-      
-      // Get user ID from AsyncStorage
-      const userData = await AsyncStorage.getItem('user_data');
-      if (!userData) {
-        Alert.alert('Error', 'User data not found. Please login again.');
-        return;
-      }
-      
-      const user = JSON.parse(userData);
-      const userId = user.user_id || user.id;
-      
-      // Format date for API (YYYY-MM-DD)
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      
-      // Format time for API (HH:MM:SS)
-      const [time, period] = selectedTime.split(/(?=[AP]M)/);
-      let [hours, minutes] = time.split(':');
-      hours = parseInt(hours);
-      
-      if (period === 'PM' && hours !== 12) {
-        hours += 12;
-      } else if (period === 'AM' && hours === 12) {
-        hours = 0;
-      }
-      
-      const formattedTime = `${String(hours).padStart(2, '0')}:${minutes || '00'}:00`;
-      
-      // Update booking via API
-      const updateData = {
-        booking_date: formattedDate,
-        booking_time: formattedTime,
-        status: 'pending' // Set to pending for vendor to reconfirm
-      };
-      
-      await bookingsAPI.updateBooking(userId, booking.id, updateData);
-      
-      setModalVisible(false);
-      
-      // Navigate to success screen
-      navigation.navigate('RescheduledBooking', {
-        booking: {
-          ...booking,
-          booking_date: formattedDate,
-          booking_time: formattedTime
-        }
-      });
-    } catch (error) {
-      console.error('Error rescheduling booking:', error);
-      Alert.alert(
-        'Error', 
-        error.response?.data?.message || 'Failed to reschedule booking. Please try again.'
-      );
-    } finally {
+    setLoading(true);
+    // Simulate API Call
+    setTimeout(() => {
       setLoading(false);
-    }
+      setModalVisible(false);
+      navigation.navigate('BookingList'); // Navigate back or to success
+    }, 1500);
   };
 
   const getCalendarDates = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const dates = [];
-    let currentWeek = [];
+    let week = Array(firstDay).fill(null);
 
-    // Add empty cells for days before the first of the month
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      currentWeek.push(null);
-    }
-
-    // Add the days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      currentWeek.push(day);
-      
-      if (currentWeek.length === 7) {
-        dates.push(currentWeek);
-        currentWeek = [];
+      week.push(day);
+      if (week.length === 7) {
+        dates.push(week);
+        week = [];
       }
     }
-
-    // Add empty cells for remaining days
-    if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) {
-        currentWeek.push(null);
-      }
-      dates.push(currentWeek);
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null);
+      dates.push(week);
     }
-
     return dates;
   };
 
   const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  
-  // Available time slots
-  const timeSlots = [
-    '10:30AM',
-    '11:30AM',
-    '2:00PM',
-    '3:30PM',
-    '4:30PM',
-    '6:00PM'
-  ];
-
-  // Function to check if date is available (customize as needed)
-  const isDateAvailable = (date) => {
-    if (!date) return false;
-    const today = new Date();
-    const selectedDateTime = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
-    // Only allow future dates
-    return selectedDateTime >= today.setHours(0, 0, 0, 0);
-  };
-
-  // Check if booking data exists
-  if (!booking) {
-    return (
-      <SafeAreaView className="flex-1 bg-white items-center justify-center" edges={['top']}>
-        <View className="w-20 h-20 bg-gray-100 rounded-full items-center justify-center mb-4">
-          <Ionicons name="alert-circle-outline" size={40} color="#9CA3AF" />
-        </View>
-        <Text className="text-lg text-gray-900 font-semibold font-dm">No booking data available</Text>
-        <TouchableOpacity 
-          className="bg-red-600 py-3 px-6 rounded-full mt-6"
-          onPress={() => navigation.goBack()}
-        >
-          <Text className="text-white font-dm font-bold">Go Back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  // Handle date selection
-  const handleDateSelect = (date) => {
-    if (date && isDateAvailable(date)) {
-      setSelectedDate(date);
-    }
-  };
-
-  // Handle time selection
-  const handleTimeSelect = (time) => {
-    setSelectedTime(time);
-  };
+  const timeSlots = ['10:30AM', '11:30AM', '2:00PM', '3:30PM', '4:30PM', '6:00PM'];
 
   return (
-    <SafeAreaView className="flex-1 bg-white p-5" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <View className="flex-row items-center justify-between mb-5">
-        <TouchableOpacity 
+
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 py-3">
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="w-10 h-10 rounded-full border-2 border-[#E8E8E8] items-center justify-center"
+          className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-100"
         >
-          <Ionicons name="arrow-back-outline" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
-        <Text className="text-2xl font-bold text-gray-900 font-dm">Reschedule Booking</Text>
-        <View className="w-10" />
+        <Text className="text-xl font-bold text-gray-900 font-dm">Reschedule</Text>
+        <View className="w-10" /> 
       </View>
 
-      <View className="bg-white border border-[#E8E8E8] rounded-2xl p-5 mb-5">
-        <View className="flex-row justify-between items-center mb-5">
-          <TouchableOpacity 
-            onPress={handlePreviousMonth}
-            className="w-8 h-8 rounded-full border border-[#E8E8E8] items-center justify-center"
-          >
-            <Ionicons name="chevron-back" size={18} color="#DC2626" />
-          </TouchableOpacity>
-          <Text className="text-base font-bold text-gray-900 font-dm">{formatMonthYear(currentDate)}</Text>
-          <TouchableOpacity 
-            onPress={handleNextMonth}
-            className="w-8 h-8 rounded-full border border-[#E8E8E8] items-center justify-center"
-          >
-            <Ionicons name="chevron-forward" size={18} color="#DC2626" />
-          </TouchableOpacity>
-        </View>
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+        {/* Calendar Card */}
+        <View className="bg-white border border-gray-100 rounded-[32px] p-5 my-4 shadow-sm">
+          <View className="flex-row justify-between items-center mb-6">
+            <TouchableOpacity onPress={handlePreviousMonth} className="p-2">
+              <Ionicons name="chevron-back" size={20} color="#DC2626" />
+            </TouchableOpacity>
+            
+            <View className="flex-row items-center">
+              <Ionicons name="calendar" size={18} color="#DC2626" />
+              <Text className="text-base font-bold text-gray-900 font-dm ml-2">
+                {formatMonthYear(currentDate)}
+              </Text>
+            </View>
 
-        <View className="flex-row justify-around mb-3">
-          {daysOfWeek.map((day, index) => (
-            <Text key={index} className="text-xs text-gray-500 font-semibold font-dm w-10 text-center">
-              {day.substring(0, 3)}
-            </Text>
-          ))}
-        </View>
+            <TouchableOpacity onPress={handleNextMonth} className="p-2">
+              <Ionicons name="chevron-forward" size={20} color="#DC2626" />
+            </TouchableOpacity>
+          </View>
 
-        <View className="rounded-xl">
-          {getCalendarDates().map((week, weekIndex) => (
-            <View key={weekIndex} className="flex-row justify-around">
-              {week.map((date, dateIndex) => (
-                <TouchableOpacity
-                  key={dateIndex}
-                  onPress={() => handleDateSelect(date)}
-                  className={`w-10 h-10 justify-center items-center my-0.5 rounded-full ${
-                    date && selectedDate === date ? 'bg-red-600' : ''
-                  }`}
-                  disabled={!date || !isDateAvailable(date)}
-                >
-                  <Text
-                    className={`text-sm font-dm ${
-                      !date ? '' : 
-                      date && selectedDate === date ? 'text-white font-bold' : 
-                      date && isDateAvailable(date) ? 'text-gray-900 font-medium' : 
-                      'text-gray-300'
+          {/* Days Header */}
+          <View className="flex-row justify-between mb-4">
+            {daysOfWeek.map((day) => (
+              <Text key={day} className="text-[10px] text-gray-400 font-bold w-9 text-center">
+                {day}
+              </Text>
+            ))}
+          </View>
+
+          {/* Dates Grid */}
+          <View>
+            {getCalendarDates().map((week, weekIdx) => (
+              <View key={weekIdx} className="flex-row justify-between mb-2">
+                {week.map((date, dateIdx) => (
+                  <TouchableOpacity
+                    key={dateIdx}
+                    onPress={() => date && setSelectedDate(date.toString())}
+                    disabled={!date}
+                    className={`w-9 h-9 justify-center items-center rounded-full ${
+                      date && selectedDate === date.toString() ? 'bg-red-600' : ''
                     }`}
                   >
-                    {date || ''}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
+                    <Text className={`text-sm font-dm ${
+                      !date ? 'text-transparent' : 
+                      selectedDate === date?.toString() ? 'text-white font-bold' : 'text-gray-900'
+                    }`}>
+                      {date}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View className="px-1">
-        <Text className="text-sm font-semibold font-dm mb-3 text-gray-900">Available Time Slots</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {timeSlots.map((time, index) => (
-            <TouchableOpacity
-              key={index}
-              className={`px-5 py-2.5 rounded-full border ${
-                selectedTime === time ? 'bg-red-600 border-red-600' : 'bg-white border-[#E8E8E8]'
-              }`}
-              onPress={() => handleTimeSelect(time)}
-            >
-              <Text
-                className={`text-sm font-semibold font-dm ${
-                  selectedTime === time ? 'text-white' : 'text-gray-900'
+        {/* Time Slots */}
+        <View className="mt-2">
+          <Text className="text-sm font-bold text-gray-900 font-dm mb-4">Available Time Slots</Text>
+          <View className="flex-row flex-wrap justify-between">
+            {timeSlots.map((time) => (
+              <TouchableOpacity
+                key={time}
+                onPress={() => setSelectedTime(time)}
+                className={`w-[31%] py-3 mb-3 rounded-2xl border items-center ${
+                  selectedTime === time ? 'bg-red-600 border-red-600' : 'bg-white border-gray-100'
                 }`}
               >
-                {time}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text className={`text-[11px] font-bold ${
+                  selectedTime === time ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
+      </ScrollView>
+
+      {/* Footer Button */}
+      <View className="px-5 py-4 border-t border-gray-50">
+        <TouchableOpacity
+          className={`w-full py-4 rounded-2xl items-center shadow-lg ${
+            selectedDate && selectedTime ? 'bg-red-600' : 'bg-gray-200'
+          }`}
+          disabled={!selectedDate || !selectedTime}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text className="text-white text-base font-bold">Reschedule Now</Text>
+        </TouchableOpacity>
+        <View className="w-20 h-1 bg-gray-200 rounded-full self-center mt-4" />
       </View>
 
-      <View className="flex-1" />
-
-      <TouchableOpacity
-        className={`mx-1 mb-4 py-4 rounded-full items-center ${
-          selectedDate && selectedTime ? 'bg-red-600' : 'bg-gray-300'
-        }`}
-        disabled={!selectedDate || !selectedTime}
-        onPress={handleProceed}
-      >
-        <Text className="text-white text-base font-bold font-dm">Reschedule</Text>
-      </TouchableOpacity>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <Pressable 
-          className="flex-1 bg-black/50 justify-center items-center px-6"
-          onPress={() => setModalVisible(false)}
-        >
-          <Pressable className="w-full bg-white rounded-3xl p-6 items-center">
-            <TouchableOpacity 
-              className="absolute top-4 right-4 w-8 h-8 items-center justify-center z-10"
-              onPress={() => setModalVisible(false)}
-            >
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-            
-            <View className="w-20 h-20 bg-red-50 rounded-full items-center justify-center mb-5 mt-2">
-              <Ionicons name="calendar" size={40} color="#DC2626" />
+      {/* Confirmation Modal */}
+      <Modal animationType="fade" transparent visible={modalVisible}>
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="w-full bg-white rounded-[40px] p-8 items-center">
+            <View className="w-16 h-16 bg-red-50 rounded-full items-center justify-center mb-6">
+              <Ionicons name="calendar" size={32} color="#DC2626" />
             </View>
             
-            <Text className="text-lg font-bold text-gray-900 text-center mb-3 font-dm">
-              Are you sure you want to{'\n'}reschedule your booking?
+            <Text className="text-xl font-bold text-gray-900 text-center mb-2">Confirm Reschedule</Text>
+            <Text className="text-gray-500 text-center leading-6 mb-8">
+              Move your booking to{"\n"}
+              <Text className="text-gray-900 font-bold">{selectedDate} June 2024</Text> at <Text className="text-gray-900 font-bold">{selectedTime}</Text>?
             </Text>
-            
-            <View className="bg-gray-50 border border-[#E8E8E8] rounded-2xl p-4 mb-6 w-full">
-              <Text className="text-base text-gray-900 font-bold text-center font-dm">
-                {selectedDate} {formatMonthYear(currentDate)} at {selectedTime}
-              </Text>
-            </View>
-            
+
             <TouchableOpacity
-              className="bg-red-600 py-4 rounded-full w-full mb-3"
+              className="bg-red-600 py-4 rounded-2xl w-full mb-3"
               onPress={handleConfirm}
               disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-base font-bold text-center font-dm">Confirm</Text>
-              )}
+              {loading ? <ActivityIndicator color="white" /> : <Text className="text-white text-center font-bold">Yes, Confirm</Text>}
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+
+            <TouchableOpacity onPress={() => setModalVisible(false)} className="py-2">
+              <Text className="text-gray-400 font-bold">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
-
-
     </SafeAreaView>
   );
 }
-
