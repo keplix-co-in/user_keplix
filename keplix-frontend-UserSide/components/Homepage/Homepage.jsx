@@ -16,16 +16,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bookingsAPI, servicesAPI } from '../../services/api';
 import locationService from '../../services/locationService';
-
-// Backend URL
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
-
-const getImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  if (typeof imagePath === 'string' && imagePath.startsWith('http')) return { uri: imagePath };
-  if (typeof imagePath === 'string') return { uri: `${BASE_URL}${imagePath}` };
-  return imagePath; 
-};
+import { getImageUrl } from '../../utils/imageHelper';
 
 // Memoized workshop card component
 const WorkshopCard = memo(({ item, navigation }) => {

@@ -12,11 +12,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { servicesAPI } from '../../services/api';
+import { getImageUrl } from '../../utils/imageHelper';
 
 // Memoized Service Card Component
 const ServiceCard = memo(({ service, onPress }) => {
   const defaultImage = require('../../assets/images/p1.png');
-  const serviceImage = service.image_url ? { uri: service.image_url } : defaultImage;
+  const serviceImage = getImageUrl(service.image_url) || defaultImage;
 
   return (
     <TouchableOpacity

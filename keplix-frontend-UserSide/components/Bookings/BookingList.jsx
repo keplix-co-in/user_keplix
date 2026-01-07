@@ -4,13 +4,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bookingsAPI } from '../../services/api';
+import { getImageUrl } from '../../utils/imageHelper';
 
 // Memoized BookingCard component
 const BookingCard = memo(({ booking, onViewDetails }) => {
   const defaultImage = require('../../assets/images/p1.png');
-  const serviceImage = booking.service?.image_url
-    ? { uri: booking.service.image_url }
-    : defaultImage;
+  const serviceImage = getImageUrl(booking.service?.image_url) || defaultImage;
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
