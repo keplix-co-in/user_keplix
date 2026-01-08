@@ -7,7 +7,9 @@ import {
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from 'expo-linear-gradient'; //
+import { LinearGradient } from 'expo-linear-gradient'; 
+import { googleAuthService } from '../../services/googleAuth';
+import { Alert } from 'react-native';
 
 // Constants for Icons
 const APPLE_ICON_URL = "https://img.icons8.com/ios-filled/50/000000/mac-os.png";
@@ -19,6 +21,23 @@ export default function LoginScreen({ navigation }) {
   const handleSkip = useCallback(() => {
     navigation.navigate("Homepage");
   }, [navigation]);
+
+  const handleGoogleLogin = async () => {
+    try {
+      const user = await googleAuthService.signIn();
+      if (user) {
+        // If it's a new user, you might want to send them to onboarding logic
+        // For now, straight to Homepage like email login
+        navigation.navigate("Homepage"); 
+      }
+    } catch (error) {
+      if (error.message.includes('Play Services')) {
+         Alert.alert('Error', 'Google Play Services are required for this action.');
+      } else {
+         Alert.alert('Login Failed', 'Could not sign in with Google. Please try again.');
+      }
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -68,7 +87,10 @@ export default function LoginScreen({ navigation }) {
             <Image source={{ uri: APPLE_ICON_URL }} className="w-7 h-7" />
           </TouchableOpacity>
           
-          <TouchableOpacity className="w-[30%] h-14 border border-gray-400 rounded-[30px] justify-center items-center">
+          <TouchableOpacity 
+            className="w-[30%] h-14 border border-gray-400 rounded-[30px] justify-center items-center"
+            onPress={handleGoogleLogin}
+          >
             <Image source={{ uri: GOOGLE_ICON_URL }} className="w-7 h-7" />
           </TouchableOpacity>
           

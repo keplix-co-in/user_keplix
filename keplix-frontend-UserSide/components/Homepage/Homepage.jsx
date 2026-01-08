@@ -14,9 +14,11 @@ import {
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 import { bookingsAPI, servicesAPI } from '../../services/api';
 import locationService from '../../services/locationService';
 import { getImageUrl } from '../../utils/imageHelper';
+import HomeMapSection from './HomeMapSection';
 
 // Memoized workshop card component
 const WorkshopCard = memo(({ item, navigation }) => {
@@ -108,6 +110,7 @@ export default function Homepage({ navigation }) {
   const [locationText, setLocationText] = useState('Set your location');
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
 
   // Memoize static data to prevent re-creation on every render
   const featuredServices = useMemo(() => [
@@ -207,27 +210,26 @@ export default function Homepage({ navigation }) {
 
   // Load location data on mount and when screen focuses
   useEffect(() => {
-    loadLocationData();
-
-    // Add focus listener to reload location when returning to this screen
-    const unsubscribe = navigation.addListener('focus', () => {
-      console.log('Homepage focused, reloading location');
-      // Force reload location data
-      setTimeout(() => {
-        loadLocationData();
-      }, 100);
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+    if (isFocused) {
+      loadLocationData();
+    }
+  }, [isFocused]);
 
   const loadLocationData = async () => {
     try {
-      console.log('Loading location data...');
-      const locationSummary = await locationService.getLocationSummary();
-      console.log('Location summary:', locationSummary);
-      setHasLocationPermission(locationSummary.hasPermission);
-      setLocationText(locationSummary.shortText || 'Set your location');
+      const { address } = await locationService.loadSavedLocation();
+      if (address) {
+        const { city, district, street, subregion } = address;
+        const locationString = [street, city, subregion, district]
+          .filter(Boolean)
+          .join(', ');
+        setLocationText(locationString || 'Location updated');
+      } else {
+        // Fallback to checking permission status if no saved address
+        const permission = await locationService.hasPermission();
+        setHasLocationPermission(permission);
+        setLocationText(permission ? 'Current Location' : 'Set your location');
+      }
     } catch (error) {
       console.error('Error loading location:', error);
       setLocationText('Set your location');
@@ -235,9 +237,8 @@ export default function Homepage({ navigation }) {
   };
 
   const handleLocationPress = () => {
-    console.log('Location button pressed, navigating to LocationPicker');
-    // Navigate to LocationPicker - location will be updated via focus listener on return
-    navigation.navigate('LocationPicker');
+    // Navigate to MapLocationPicker to change location on a map
+    navigation.navigate('MapLocationPicker');
   };
 
   const fetchUserData = async () => {

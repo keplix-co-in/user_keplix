@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api';
+import { tokenManager } from '../../services/tokenManager';
 
 export default function EmailVerify({ navigation, route }) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -45,7 +47,27 @@ export default function EmailVerify({ navigation, route }) {
 
     setLoading(true);
     try {
-      await authAPI.verifyEmailOTP(email.trim(), enteredOtp);
+      const response = await authAPI.verifyEmailOTP(email.trim(), enteredOtp);
+      
+      // If tokens are returned, store them and log the user in
+      if (response.data.access && response.data.refresh) {
+        await tokenManager.setTokens(response.data.access, response.data.refresh);
+        
+        // Store user data
+        if (response.data.user) {
+          const userData = {
+            id: response.data.user.id,
+            email: response.data.user.email,
+            role: response.data.user.role,
+            name: response.data.user.name || '',
+            phone: response.data.user.phone || '',
+            address: response.data.user.address || '',
+            is_active: response.data.user.is_active,
+          };
+          await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+        }
+      }
+
       Alert.alert('Success', 'Email verified successfully!', [
         { text: 'OK', onPress: () => navigation.navigate('WelcomeScreen') },
       ]);

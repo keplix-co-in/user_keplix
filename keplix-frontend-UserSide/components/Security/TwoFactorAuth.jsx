@@ -26,7 +26,6 @@ export default function TwoFactorScreen({ navigation }) {
 
       <Text className="text-sm text-center text-[#0000008F] font-['DM'] px-2.5">
         For extra security, turn on two-step verification, which will require a PIN when registering your phone number with Keplix again.
-        <Text className="text-[#DC2626]" onPress={() => Linking.openURL('https://example.com')}> Learn more</Text>
       </Text>
 
       <View className="mt-auto mb-5">

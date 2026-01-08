@@ -39,6 +39,19 @@ export default function ResetPassword({ navigation, route }) {
       </Text>
 
       <View className="mt-4">
+        <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter OTP sent to your email</Text>
+        <TextInput
+          className="h-[56px] border-2 border-[#E8E8E8] rounded-5xl px-4 text-base text-black font-['DM']"
+          placeholder="Enter 6-digit OTP"
+          placeholderTextColor="#999"
+          value={otp}
+          onChangeText={setOtp}
+          keyboardType="numeric"
+          maxLength={6}
+        />
+      </View>
+
+      <View className="mt-5">
         <Text className="text-sm text-[#666] mb-2 font-['DM']">Enter your new password</Text>
         <View className="flex-row items-center border-2 border-[#E8E8E8] rounded-5xl px-4 h-[56px]">
           <TextInput

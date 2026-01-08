@@ -75,16 +75,21 @@ export default function TwoFactorAuthentication({ navigation }) {
 
         <Text className="text-sm text-center text-[#0000008F] font-['DM'] px-2.5 mb-[30px]">
           For extra security, turn on two-step verification, which will require a PIN when registering your phone number with Keplix again.
-          <Text className="text-[#DC2626]" onPress={() => Linking.openURL('https://example.com')}> Learn more</Text>
         </Text>
 
-        <TouchableOpacity className="flex-row items-center mb-5">
+        <TouchableOpacity 
+          className="flex-row items-center mb-5"
+          onPress={() => navigation.navigate('EnableTwoFactor')}
+        >
           <Text className="text-base font-medium font-['DM'] text-black">*** Change Pin</Text>
         </TouchableOpacity>
 
         <View className="h-[1px] bg-[#E2E2E2] my-2.5" />
 
-        <TouchableOpacity className="flex-row items-center mb-5">
+        <TouchableOpacity 
+          className="flex-row items-center mb-5"
+          onPress={() => navigation.navigate('AddEmail')}
+        >
           <Ionicons name="bulb-outline" size={20} color="#000" style={{ marginRight: 8 }} />
           <View>
             <Text className="text-base font-medium font-['DM'] text-black">Add Recovery Email</Text>
