@@ -1,5 +1,5 @@
 // Helper to construct image URL
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+export const BASE_URL = 'http://192.168.1.4:8000';
 
 /**
  * Resolves the full URL for an image path.

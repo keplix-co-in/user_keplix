@@ -341,45 +341,7 @@ class LocationService {
     }
   }
 
-  /**
-   * Get location summary for display
-   * @returns {Promise<Object>}
-   */
-  async getLocationSummary() {
-    try {
-      console.log('Getting location summary...');
-      console.log('Current in-memory location:', this.currentLocation);
-      console.log('Current in-memory address:', this.currentAddress);
-      
-      const location = this.currentLocation || await this.getLastKnownLocation();
-      const address = this.currentAddress || await this.getSavedAddress();
-      const hasPermission = await this.hasPermission();
 
-      console.log('Final location:', location);
-      console.log('Final address:', address);
-      console.log('Has permission:', hasPermission);
-
-      const summary = {
-        hasPermission,
-        location,
-        address,
-        displayText: address?.formattedAddress || 'Set your location',
-        shortText: address?.city || address?.district || address?.subregion || 'Set your location',
-      };
-
-      console.log('Location summary result:', summary);
-      return summary;
-    } catch (error) {
-      console.error('Error getting location summary:', error);
-      return {
-        hasPermission: false,
-        location: null,
-        address: null,
-        displayText: 'Set your location',
-        shortText: 'Set your location',
-      };
-    }
-  }
 
   /**
    * Update current location and address with provided data
@@ -434,6 +396,48 @@ class LocationService {
     } catch (error) {
       console.error('Error refreshing location:', error);
       return null;
+    }
+  }
+
+  /**
+   * Save user's location and address to AsyncStorage
+   * @param {Object} location - The location object from expo-location
+   * @param {Object} address - The address object from expo-location
+   */
+  async saveLocation(location, address) {
+    try {
+      if (location) {
+        await AsyncStorage.setItem(USER_LOCATION_KEY, JSON.stringify(location));
+        this.currentLocation = location;
+      }
+      if (address) {
+        await AsyncStorage.setItem(USER_ADDRESS_KEY, JSON.stringify(address));
+        this.currentAddress = address;
+      }
+    } catch (error) {
+      console.error('Error saving location data:', error);
+    }
+  }
+
+  /**
+   * Load saved location and address from AsyncStorage
+   * @returns {Promise<{location: Object|null, address: Object|null}>}
+   */
+  async loadSavedLocation() {
+    try {
+      const locationString = await AsyncStorage.getItem(USER_LOCATION_KEY);
+      const addressString = await AsyncStorage.getItem(USER_ADDRESS_KEY);
+
+      const location = locationString ? JSON.parse(locationString) : null;
+      const address = addressString ? JSON.parse(addressString) : null;
+
+      this.currentLocation = location;
+      this.currentAddress = address;
+
+      return { location, address };
+    } catch (error) {
+      console.error('Error loading saved location data:', error);
+      return { location: null, address: null };
     }
   }
 }
