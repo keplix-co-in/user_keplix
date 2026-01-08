@@ -19,7 +19,7 @@ import { tokenManager } from './tokenManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Backend URL - Configure in .env file
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+const BASE_URL = 'http://192.168.1.8:8000';
 
 // Debug: Log the API URL being used
 console.log('🔗 API BASE_URL:', BASE_URL);

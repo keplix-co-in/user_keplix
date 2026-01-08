@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationsAPI } from '../../services/api';
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 
 export default function Notification({ navigation }) {
   const [customAlertsEnabled, setCustomAlertsEnabled] = useState(false);
@@ -58,21 +60,42 @@ export default function Notification({ navigation }) {
     }
   };
 
-  const toggleCustomAlerts = () => {
+  const toggleCustomAlerts = async () => {
     const newState = !customAlertsEnabled;
     setCustomAlertsEnabled(newState);
     setShowDropdown(newState);
     setHasChanges(true);
+
+    if (newState) {
+       // Play sound and vibrate as preview
+       try {
+         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+         const { sound } = await Audio.Sound.createAsync(
+            { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' }
+         );
+         await sound.playAsync();
+       } catch (error) {
+         console.log('Error playing test sound:', error);
+       }
+    }
   };
   
   const toggleEmailAlerts = () => {
-    setEmailAlertsEnabled(previousState => !previousState);
+    const newState = !emailAlertsEnabled;
+    setEmailAlertsEnabled(newState);
     setHasChanges(true);
+    if (newState) {
+        Alert.alert("Email Alerts", "You will now receive booking updates via email.");
+    }
   };
 
   const toggleSmsAlerts = () => {
-    setSmsAlertsEnabled(previousState => !previousState);
+    const newState = !smsAlertsEnabled;
+    setSmsAlertsEnabled(newState);
     setHasChanges(true);
+    if (newState) {
+        Alert.alert("SMS Alerts", "SMS notifications enabled. Carrier rates may apply.");
+    }
   };
   
   const toggleDropdown = () => setDropdownExpanded(!dropdownExpanded);
@@ -97,6 +120,20 @@ export default function Notification({ navigation }) {
       // Save to AsyncStorage
       await AsyncStorage.setItem('notification_settings', JSON.stringify(settings));
       
+      // Sync with backend if logged in
+      if (userId) {
+          // Mock API call - in production replace with notificationsAPI.updateSettings(userId, settings)
+          console.log(`[Notification] Syncing settings for user ${userId}:`, settings);
+          if (emailAlertsEnabled) {
+              console.log('[Notification] Sending test email alert confirmation...');
+              // await notificationsAPI.sendTestEmail(userId);
+          }
+          if (smsAlertsEnabled) {
+              console.log('[Notification] Sending test SMS alert confirmation...');
+              // await notificationsAPI.sendTestSMS(userId);
+          }
+      }
+
       Alert.alert(
         'Success',
         'Notification settings saved successfully!',

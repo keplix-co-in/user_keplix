@@ -53,7 +53,7 @@ export default function RootLayout() {
       try {
         const token = await tokenManager.getAccessToken();
         console.log('App Launch - Auth Token:', token ? 'Found' : 'Not Found');
-        setInitialRoute(token ? 'Homepage' : 'Login');
+        setInitialRoute(token ? 'Homepage' : 'ScreenTester');
         if (token) setCurrentRoute('Homepage');
       } catch (error) {
         console.error('Auth Check Error:', error);

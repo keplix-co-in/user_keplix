@@ -33,6 +33,9 @@ export default function LocationPermissionScreen({ navigation }) {
             location.longitude
           );
 
+          // Save the location and address
+          await locationService.saveLocation(location, address);
+
           if (address) {
             console.log("Address:", address);
           }

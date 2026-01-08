@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/images/Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.aryan1611.UserSide",
+      "package": "com.Keplix.UserSide",
       "softwareKeyboardLayoutMode": "pan",
       "statusBar": {
         "translucent": true,
