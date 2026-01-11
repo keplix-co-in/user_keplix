@@ -29,13 +29,16 @@ export const googleAuthService = {
       
       // 2. Prompt the user to sign in
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
+      
+      // Handle different library versions (some return {data}, some return object directly)
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
 
       if (!idToken) {
+        console.error('Google Sign-In Info:', JSON.stringify(userInfo));
         throw new Error('No ID token obtained from Google');
       }
 
-      console.log('Got Google ID Token, sending to backend...');
+      console.log('Got Google ID Token (starts with):', idToken.substring(0, 20));
 
       // 3. Send the ID Token to your Django Backend
       const response = await api.post('/accounts/auth/google/', {
@@ -47,7 +50,7 @@ export const googleAuthService = {
       const { refresh, access, user } = response.data;
 
       // 4. Save the Django tokens (Session is now established)
-      await tokenManager.setToken(access);
+      await tokenManager.setAccessToken(access);
       await tokenManager.setRefreshToken(refresh);
       await AsyncStorage.setItem('user_data', JSON.stringify(user));
 
@@ -67,7 +70,11 @@ export const googleAuthService = {
         throw new Error('Google Play Services required');
       } else {
         // some other error happened
-        console.error('Google Sign-In Error:', error);
+        if (error.response) {
+          console.error('Google Sign-In Backend Error Data:', error.response.data);
+          console.error('Google Sign-In Backend Status:', error.response.status);
+        }
+        console.error('Google Sign-In Error:', error.message);
         throw error;
       }
     }
