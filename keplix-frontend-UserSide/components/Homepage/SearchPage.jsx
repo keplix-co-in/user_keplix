@@ -269,7 +269,7 @@ export default function SearchPage({ navigation }) {
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
 
-        <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-200">
+        <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-1 border border-gray-200">
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
             className="flex-1 ml-2 text-base font-dm text-gray-900"

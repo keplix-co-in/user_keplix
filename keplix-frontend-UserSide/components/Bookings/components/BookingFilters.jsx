@@ -40,7 +40,7 @@ export default function BookingFilters({
           {/* Date */}
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-500 font-dm mb-2">Date (YYYY-MM-DD)</Text>
-            <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-3">
+            <View className="flex-row items-center border border-gray-200 rounded-full px-4 py-2">
               <TextInput
                 className="flex-1 text-gray-900 font-semibold font-dm text-base"
                 value={filters.date}
@@ -54,7 +54,7 @@ export default function BookingFilters({
           {/* Service Name */}
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-500 font-dm mb-2">Service Name</Text>
-            <View className="flex-row items-center border border-gray-200 rounded-5xl px-4 py-3">
+            <View className="flex-row items-center border border-gray-200 rounded-5xl px-4 py-2">
               <TextInput
                 className="flex-1 text-gray-900 font-bold font-dm text-base"
                 value={filters.serviceName}
@@ -67,7 +67,7 @@ export default function BookingFilters({
           {/* Service Type */}
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-500 font-dm mb-2">Service Type</Text>
-            <View className="flex-row items-center justify-between border border-gray-200 rounded-full px-4 py-3">
+            <View className="flex-row items-center justify-between border border-gray-200 rounded-full px-4 py-2">
               <TextInput
                 className="flex-1 text-gray-900 font-bold font-dm text-base"
                 value={filters.serviceType}
@@ -80,7 +80,7 @@ export default function BookingFilters({
           {/* Payment Type */}
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-500 font-dm mb-2">Payment Type</Text>
-            <View className="flex-row items-center justify-between border border-gray-200 rounded-full px-4 py-3">
+            <View className="flex-row items-center justify-between border border-gray-200 rounded-full px-4 py-2">
               <TextInput
                 className="flex-1 text-gray-900 font-bold font-dm text-base"
                 value={filters.paymentType}
@@ -94,7 +94,7 @@ export default function BookingFilters({
           <View className="mb-8">
             <Text className="text-sm font-medium text-gray-500 font-dm mb-2">Price Range</Text>
             <View className="flex-row items-center justify-between">
-              <View className="border border-gray-200 rounded-full px-6 py-3 w-[45%]">
+              <View className="border border-gray-200 rounded-full px-6 py-2 w-[45%]">
                 <TextInput
                   className="text-gray-900 font-bold font-dm text-base text-center"
                   value={filters.tokenFrom}
@@ -104,7 +104,7 @@ export default function BookingFilters({
                 />
               </View>
               <Text className="text-gray-500 font-medium">to</Text>
-              <View className="border border-gray-200 rounded-full px-6 py-3 w-[45%]">
+              <View className="border border-gray-200 rounded-full px-6 py-2 w-[45%]">
                 <TextInput
                   className="text-gray-900 font-bold font-dm text-base text-center"
                   value={filters.tokenTo}

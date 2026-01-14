@@ -1,6 +1,6 @@
 /**
  * KEPLIX USER-SIDE API INTEGRATION
- * ==================================
+ * ================================
  * 
  * BASE URL: http://localhost:8000 (Backend Django Server)
  * 
@@ -19,7 +19,7 @@ import { tokenManager } from './tokenManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Backend URL - Configure in .env file
-const BASE_URL = 'http://192.168.1.8:8000';
+const BASE_URL = 'https://untyped-ed-xenogenic.ngrok-free.dev';
 
 // Debug: Log the API URL being used
 console.log('🔗 API BASE_URL:', BASE_URL);
@@ -58,7 +58,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip refresh logic for login, signup, and OTP endpoints
+    const isAuthRequest = originalRequest.url.includes('/accounts/auth/');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;
 
       try {

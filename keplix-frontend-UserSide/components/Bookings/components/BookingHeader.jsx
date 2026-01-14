@@ -32,7 +32,7 @@ export default function BookingHeader({
       {/* Control Row: Search/Date & Action Buttons */}
       <View className="flex-row items-center justify-between px-5 py-4 min-h-[70px]">
         {searchVisible ? (
-          <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-2 mr-3 border border-gray-200">
+          <View className="flex-1 flex-row items-center bg-gray-50 rounded-full px-4 py-1 mr-3 border border-gray-200">
             <Ionicons name="search" size={20} color="#9CA3AF" />
             <TextInput
               className="flex-1 ml-2 text-base font-dm text-gray-900"
