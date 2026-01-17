@@ -104,36 +104,37 @@ export const authAPI = {
   login: (credentials) => api.post('/accounts/auth/login/', credentials),
   
   // Profile
-  getProfile: () => api.get('/accounts/profile/'),
-  updateProfile: (profileData) => api.put('/accounts/profile/', profileData),
+  getProfile: () => api.get('/accounts/auth/profile'), // Fixed
+  updateProfile: (profileData) => {
+    // TODO: Backend Missing Update Profile Endpoint
+    console.warn("Update Profile not implemented in backend correctly yet");
+    return Promise.resolve({ data: {} }); 
+    // api.put('/accounts/auth/profile', profileData)
+  },
   
   // OTP
   sendPhoneOTP: (phoneNumber) => 
-    api.post('/accounts/auth/send-phone-otp/', { phone_number: phoneNumber }),
+    api.post('/accounts/auth/send-phone-otp', { phone_number: phoneNumber }),
   
   verifyPhoneOTP: (phoneNumber, otp) => 
-    api.post('/accounts/auth/verify-phone-otp/', { phone_number: phoneNumber, otp }),
+    api.post('/accounts/auth/verify-phone-otp', { phone_number: phoneNumber, otp }),
   
   sendEmailOTP: (email) => 
-    api.post('/accounts/auth/send-email-otp/', { email }),
+    api.post('/accounts/auth/send-email-otp', { email }),
   
   verifyEmailOTP: (email, otp) => 
-    api.post('/accounts/auth/verify-email-otp/', { email, otp }),
+    api.post('/accounts/auth/verify-email-otp', { email, otp }),
   
   // Password Reset
-  forgotPassword: (email) => api.post('/accounts/auth/forgot-password/', { email }),
+  forgotPassword: (email) => api.post('/accounts/auth/password/forgot', { email }),
   
   resetPasswordWithOTP: (email, otp, newPassword) => 
-    api.post('/accounts/auth/reset-password-otp/', { email, otp, password: newPassword }),
-  
-  // Change Password (requires authentication)
-  changePassword: (currentPassword, newPassword) => 
-    api.post('/accounts/auth/change-password/', { current_password: currentPassword, new_password: newPassword }),
+    api.post('/accounts/auth/reset-password-otp', { email, otp, password: newPassword }),
   
   // Logout
   logout: async () => {
     const refreshToken = await tokenManager.getRefreshToken();
-    return api.post('/accounts/auth/logout/', { refresh: refreshToken });
+    return api.post('/accounts/auth/logout', { refresh: refreshToken });
   },
 };
 
@@ -167,13 +168,19 @@ export const bookingsAPI = {
   createBooking: (userId, bookingData) => 
     api.post(`/service_api/user/${userId}/bookings/create`, bookingData),
   
-  // Update booking (reschedule, cancel, etc.)
-  updateBooking: (userId, bookingId, bookingData) => 
-    api.put(`/service_api/user/${userId}/bookings/update/${bookingId}`, bookingData),
-  
-  // Get booking details
-  getBookingDetails: (bookingId) => 
-    api.get(`/service_api/user/bookings/${bookingId}`),
+  // Update booking - NOT IMPLEMENTED IN BACKEND
+  updateBooking: (userId, bookingId, bookingData) => {
+      console.warn("updateBooking not available in backend");
+      return Promise.reject("Not Implemented");
+      // api.put(`/service_api/user/${userId}/bookings/update/${bookingId}`, bookingData),
+  },
+
+  // Get booking details - NOT IMPLEMENTED IN BACKEND
+  getBookingDetails: (bookingId) => {
+      console.warn("getBookingDetails not available in backend");
+      return Promise.reject("Not Implemented");
+     // api.get(`/service_api/user/bookings/${bookingId}`),
+  }
 };
 
 // ======================
@@ -181,25 +188,23 @@ export const bookingsAPI = {
 // ======================
 
 export const paymentsAPI = {
-  // Create payment for booking
+  // Create payment order (Razorpay/Stripe)
   createPayment: (bookingId, paymentData) => 
-    api.post(`/service_api/bookings/${bookingId}/payment/create/`, paymentData),
-  
-  // Get payment details
-  getPaymentDetails: (paymentId) => 
-    api.get(`/service_api/payments/${paymentId}/`),
-  
-  // Get payment by booking
-  getPaymentByBooking: (bookingId) => 
-    api.get(`/service_api/bookings/${bookingId}/payment/`),
+    api.post(`/service_api/payments/order/create`, paymentData), // Fixed endpoint
   
   // Verify payment
   verifyPayment: (paymentData) => 
-    api.post(`/service_api/payments/verify/`, paymentData),
+    api.post(`/service_api/payments/verify`, paymentData), // Fixed endpoint
   
   // Get user's payment history
   getUserPayments: (userId) => 
-    api.get(`/service_api/user/${userId}/payments/`),
+    api.get(`/service_api/user/${userId}/payments`), // Fixed endpoint
+
+  // Get payment details - NOT IMPLEMENTED
+  getPaymentDetails: (paymentId) => Promise.reject("Not Implemented"),
+  
+  // Get payment by booking - NOT IMPLEMENTED
+  getPaymentByBooking: (bookingId) => Promise.reject("Not Implemented"),
 };
 
 // ======================
@@ -207,39 +212,31 @@ export const paymentsAPI = {
 // ======================
 
 export const reviewsAPI = {
-  // Get reviews (filter by vendor, user, rating)
+  // Get reviews
   getReviews: (filters = {}) => 
-    api.get('/interactions/reviews/', { params: filters }),
+    api.get('/interactions/api/reviews', { params: filters }), // Fixed Prefix
   
   // Create review
   createReview: (reviewData) => 
-    api.post('/interactions/reviews/create/', reviewData),
+    api.post('/interactions/api/reviews/create', reviewData), // Fixed Prefix
   
-  // Get review details
-  getReviewDetails: (reviewId) => 
-    api.get(`/interactions/reviews/${reviewId}/`),
-  
-  // Update review
-  updateReview: (reviewId, reviewData) => 
-    api.put(`/interactions/reviews/${reviewId}/update/`, reviewData),
-  
-  // Delete review
-  deleteReview: (reviewId, userId) => 
-    api.delete(`/interactions/reviews/${reviewId}/delete/`, { data: { user_id: userId } }),
+  // Update/Delete/Details - NOT IMPLEMENTED
+  getReviewDetails: (reviewId) => Promise.reject("Not Implemented"),
+  updateReview: (reviewId, reviewData) => Promise.reject("Not Implemented"),
+  deleteReview: (reviewId, userId) => Promise.reject("Not Implemented"),
 };
 
 export const feedbackAPI = {
   // Get user's feedback
   getUserFeedback: (userId) => 
-    api.get('/interactions/feedback/', { params: { user_id: userId } }),
+    api.get('/interactions/api/feedback', { params: { user_id: userId } }), // Fixed Prefix
   
   // Create feedback
   createFeedback: (feedbackData) => 
-    api.post('/interactions/feedback/', feedbackData),
+    api.post('/interactions/api/feedback/create', feedbackData), // Fixed Prefix
   
-  // Get feedback details
-  getFeedbackDetails: (feedbackId) => 
-    api.get(`/interactions/feedback/${feedbackId}/`),
+  // Get feedback details - NOT IMPLEMENTED
+  getFeedbackDetails: (feedbackId) => Promise.reject("Not Implemented"),
 };
 
 // ======================
@@ -249,15 +246,18 @@ export const feedbackAPI = {
 export const notificationsAPI = {
   // Get user's notifications
   getUserNotifications: (userId) => 
-    api.get(`/interactions/users/${userId}/notifications/`),
+    api.get(`/interactions/api/users/${userId}/notifications`), // Fixed Prefix
   
   // Mark notification as read
   markNotificationRead: (notificationId) => 
-    api.put(`/interactions/notifications/${notificationId}/mark-read/`),
+    api.put(`/interactions/api/notifications/${notificationId}/mark-read`), // Fixed Prefix
   
-  // Mark all notifications as read
-  markAllNotificationsRead: (userId) => 
-    api.put(`/interactions/users/${userId}/notifications/mark-all-read/`),
+  // Mark all notifications as read - NOT IMPLEMENTED
+  markAllNotificationsRead: (userId) => Promise.reject("Not Implemented"),
+
+  // Save FCM Token
+  updateFcmToken: (fcmToken) => 
+    api.put('/interactions/api/users/fcm-token', { fcmToken })
 };
 
 // ======================
@@ -265,22 +265,19 @@ export const notificationsAPI = {
 // ======================
 
 export const chatAPI = {
-  // Get conversation by booking
-  getConversation: (bookingId) => 
-    api.get(`/interactions/conversations/${bookingId}/`),
-  
-  // Create conversation
-  createConversation: (bookingId) => 
-    api.post(`/interactions/conversations/${bookingId}/create/`),
+  // Get all conversations
+  getConversations: () => 
+    api.get(`/interactions/api/conversations`), // Fixed endpoint
   
   // Get messages
   getMessages: (conversationId) => 
-    api.get(`/interactions/messages/${conversationId}/`),
+    api.get(`/interactions/api/messages`, { params: { conversation_id: conversationId } }), // Fixed endpoint
   
-  // Send message
-  sendMessage: (conversationId, messageData) => 
-    api.post(`/interactions/messages/${conversationId}/send/`, messageData),
+  // Create conversation/Send message - NOT IMPLEMENTED VIA REST (Use Socket)
+  createConversation: (bookingId) => Promise.resolve({}), // Usually auto-created by booking
+  sendMessage: (conversationId, messageData) => Promise.reject("Use Socket.io"),
 };
+
 
 // Export the configured axios instance
 export default api;
